@@ -1,0 +1,5 @@
+.admin-gate { display: grid; min-height: 100vh; place-items: center; padding: var(--space-5); background: var(--color-background); }
+.admin-gate__content { width: min(100%, 420px); text-align: center; }
+.admin-gate__content h1 { color: #24292f; font-size: 1.25rem; }
+.admin-gate__content p { margin-top: var(--space-5); color: #7b8279; font-size: 0.875rem; }
+.admin-gate__content .button { width: 100%; min-height: 40px; margin-top: var(--space-6); border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); }

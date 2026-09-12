@@ -1,0 +1,307 @@
+.home-hero {
+  display: grid;
+  width: min(100% - 40px, var(--container-wide));
+  align-items: center;
+  gap: var(--space-12);
+  margin-inline: auto;
+  padding-block: var(--space-14) var(--space-16);
+}
+
+.home-hero__copy,
+.home-visual {
+  min-width: 0;
+}
+
+.home-hero__title {
+  max-width: 680px;
+  margin-top: var(--space-6);
+  color: var(--color-primary);
+  font-family: var(--font-editorial);
+  font-size: 3.5rem;
+  font-weight: 400;
+  letter-spacing: -0.035em;
+  line-height: 0.93;
+}
+
+.home-hero__description {
+  max-width: 576px;
+  margin-top: var(--space-7);
+  color: var(--color-supporting-text);
+  font-size: 1.125rem;
+  line-height: 1.78;
+}
+
+.home-hero__actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: 36px;
+}
+
+.home-visual {
+  position: relative;
+  min-height: 420px;
+}
+
+.home-visual__backdrop {
+  position: absolute;
+  inset: 16px 0 16px 20px;
+  border-radius: 48px;
+  background: var(--color-primary);
+}
+
+.home-visual__sun {
+  position: absolute;
+  top: 0;
+  right: -16px;
+  z-index: 2;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: var(--color-accent);
+}
+
+.home-visual__image {
+  position: absolute;
+  top: 32px;
+  right: 8%;
+  left: 0;
+  width: 92%;
+  height: 390px;
+  border-radius: var(--radius-hero);
+  box-shadow: var(--shadow-hero);
+  object-fit: cover;
+}
+
+.progress-card {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  z-index: 3;
+  width: min(260px, 76%);
+  padding: var(--space-5);
+  border: 1px solid var(--color-soft-green);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+}
+
+.progress-card__label {
+  color: var(--color-muted-text);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.progress-card__title {
+  margin-top: var(--space-2);
+  color: var(--color-primary);
+  font-family: var(--font-editorial);
+  font-size: 1.5rem;
+}
+
+.progress-card__row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+  color: var(--color-muted-text);
+  font-size: 0.75rem;
+}
+
+.progress-card__track {
+  height: 8px;
+  flex: 1;
+  overflow: hidden;
+  border-radius: var(--radius-pill);
+  background: var(--color-soft-green);
+}
+
+.progress-card__track span {
+  display: block;
+  width: 40%;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--color-accent);
+}
+
+.leaf-orbit {
+  position: absolute;
+  right: 12px;
+  bottom: 40px;
+  width: 112px;
+  height: 96px;
+}
+
+.leaf-orbit::before,
+.leaf-orbit::after {
+  position: absolute;
+  border: 1px solid rgba(220, 230, 216, 0.85);
+  border-radius: 999px 0;
+  content: '';
+  transform: rotate(35deg);
+}
+
+.leaf-orbit::before { width: 112px; height: 35px; }
+.leaf-orbit::after { width: 72px; height: 24px; margin: 42px 0 0 56px; }
+
+.benefits-band {
+  padding: var(--space-7);
+  border-radius: var(--radius-large);
+  background: var(--color-soft-green);
+}
+
+.benefits-band__title {
+  color: var(--color-primary);
+  font-family: var(--font-editorial);
+  font-size: 1.9rem;
+  font-weight: 400;
+  line-height: 1.2;
+}
+
+.benefits-band__items {
+  display: grid;
+  gap: var(--space-5);
+  margin-top: var(--space-7);
+}
+
+.benefit {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.benefit span {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--color-primary);
+  background: var(--color-background);
+}
+
+.benefit p {
+  color: var(--color-primary);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.home-section-heading {
+  max-width: 780px;
+  margin-inline: auto;
+  text-align: center;
+}
+
+.home-section-heading .eyebrow { justify-content: center; }
+.home-section-heading .editorial-heading { margin-top: var(--space-5); }
+
+.home-card-grid,
+.home-content-grid {
+  display: grid;
+  gap: var(--space-5);
+  margin-top: var(--space-12);
+}
+
+.manifesto-split {
+  display: grid;
+}
+
+.manifesto-split__quote,
+.manifesto-split__copy {
+  position: relative;
+  padding: var(--space-16) var(--space-8);
+}
+
+.manifesto-split__quote {
+  overflow: hidden;
+  color: var(--color-background);
+  background: var(--color-primary);
+}
+
+.manifesto-split__quote > span {
+  position: absolute;
+  top: 24px;
+  left: 40px;
+  color: rgba(230, 212, 0, 0.75);
+  font-size: 4.5rem;
+}
+
+.manifesto-split__quote p {
+  position: relative;
+  max-width: 580px;
+  font-family: var(--font-editorial);
+  font-size: 2.5rem;
+  line-height: 1.08;
+}
+
+.manifesto-split__quote i {
+  position: absolute;
+  right: 56px;
+  bottom: 36px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--color-accent);
+}
+
+.manifesto-split__copy {
+  background: var(--color-muted);
+}
+
+.manifesto-split__copy .editorial-heading { max-width: 500px; margin-top: var(--space-5); }
+.manifesto-split__copy > p { max-width: 560px; margin-top: var(--space-5); color: var(--color-muted-text); line-height: 1.75; }
+.manifesto-split__copy .button { margin-top: var(--space-7); }
+
+.home-contents__heading {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-6);
+}
+
+.home-contents__heading .editorial-heading { margin-top: var(--space-5); }
+
+@media (min-width: 640px) {
+  .home-hero__title { font-size: 4.5rem; }
+  .home-hero__actions { flex-direction: row; }
+  .home-visual { min-height: 500px; }
+  .home-visual__image { height: 460px; }
+  .home-contents__heading { flex-direction: row; align-items: flex-end; }
+}
+
+@media (min-width: 768px) {
+  .home-card-grid,
+  .home-content-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (min-width: 1024px) {
+  .home-hero {
+    width: min(100% - 64px, var(--container-wide));
+    grid-template-columns: 1fr 0.94fr;
+    padding-block: var(--space-24);
+  }
+
+  .home-hero__title { font-size: 5.35rem; }
+
+  .benefits-band {
+    display: grid;
+    grid-template-columns: 1.15fr 1.85fr;
+    align-items: center;
+    padding: 36px;
+  }
+
+  .benefits-band__items {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    margin-top: 0;
+    padding-left: var(--space-8);
+    border-left: 1px solid var(--color-supporting-olive);
+  }
+
+  .manifesto-split { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .manifesto-split__quote { padding-left: max(32px, calc((100vw - 1280px) / 2 + 32px)); }
+  .manifesto-split__copy { padding-inline: var(--space-16); }
+}

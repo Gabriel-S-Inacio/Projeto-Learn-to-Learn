@@ -1,0 +1,71 @@
+:root {
+  --color-background: #f8f4e8;
+  --color-foreground: #2b2b2b;
+  --color-surface: #fffdf6;
+  --color-primary: #1f4d3a;
+  --color-primary-hover: #2e5e4e;
+  --color-soft-green: #dce6d8;
+  --color-muted: #eef1e8;
+  --color-muted-text: #557060;
+  --color-supporting-text: #415847;
+  --color-accent: #e6d400;
+  --color-olive: #7a8660;
+  --color-supporting-olive: #a8b89f;
+  --color-border: #d7ddcf;
+  --color-destructive: #b34343;
+
+  --font-editorial: 'DM Serif Display', Georgia, serif;
+  --font-interface: Inter, Arial, sans-serif;
+
+  --text-eyebrow: 0.68rem;
+  --text-nav: 0.875rem;
+  --text-button: 0.875rem;
+  --text-body: 1rem;
+  --text-body-large: 1.125rem;
+  --text-h1: 3.75rem;
+  --text-h2: 3rem;
+  --text-h3: 2.25rem;
+  --line-body: 1.75;
+  --line-display: 0.94;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 28px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-14: 56px;
+  --space-16: 64px;
+  --space-20: 80px;
+  --space-24: 96px;
+  --space-28: 112px;
+
+  --radius-base: 16px;
+  --radius-card: 24px;
+  --radius-large: 32px;
+  --radius-hero: 40px;
+  --radius-pill: 999px;
+
+  --shadow-soft: 0 10px 30px rgba(31, 77, 58, 0.08);
+  --shadow-card: 0 20px 25px -5px rgba(31, 77, 58, 0.08),
+    0 8px 10px -6px rgba(31, 77, 58, 0.08);
+  --shadow-hero: 0 28px 70px rgba(31, 77, 58, 0.22);
+
+  --container-wide: 1280px;
+  --container-medium: 1200px;
+  --container-narrow: 1120px;
+  --header-height: 80px;
+
+  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-reveal: 560ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --text-h1: 6rem;
+  }
+}

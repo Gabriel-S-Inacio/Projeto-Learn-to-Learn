@@ -1,0 +1,28 @@
+.schedule-page { min-height: 68vh; }
+.schedule-hero { padding-block: var(--space-16) var(--space-10); }
+.schedule-hero h1 { max-width: 768px; margin-top: var(--space-6); color: var(--color-primary); font-family: var(--font-editorial); font-size: 3.75rem; font-weight: 400; line-height: 0.94; }
+.schedule-hero > p { max-width: 672px; margin-top: var(--space-6); color: var(--color-muted-text); font-size: 1.125rem; line-height: 1.78; }
+.auth-notice { display: flex; flex-direction: column; gap: var(--space-5); padding: var(--space-6); border: 1px solid var(--color-border); border-radius: var(--radius-card); background: var(--color-muted); }
+.auth-notice__message { display: flex; gap: var(--space-4); }
+.auth-notice__message > span { display: grid; width: 44px; height: 44px; flex: 0 0 auto; place-items: center; border-radius: 50%; color: var(--color-primary); background: var(--color-accent); }
+.auth-notice strong { color: var(--color-primary); }
+.auth-notice p { margin-top: var(--space-1); color: var(--color-muted-text); font-size: 0.875rem; line-height: 1.55; }
+.schedule-content { padding-block: var(--space-4) var(--space-24); }
+.schedule-content .state-panel > p { max-width: 448px; margin: var(--space-3) auto 0; font-size: 0.875rem; line-height: 1.7; }
+.schedule-content .state-panel .button { margin-top: var(--space-7); }
+.schedule-spinner { display: block; width: 32px; height: 32px; margin: var(--space-5) auto 0; border: 3px solid var(--color-soft-green); border-top-color: var(--color-primary); border-radius: 50%; animation: spin 700ms linear infinite; }
+.schedule-grid { display: grid; gap: var(--space-6); }
+.schedule-slot { display: flex; align-items: center; justify-content: space-between; padding: var(--space-6); border: 1px solid var(--color-border); border-radius: var(--radius-card); background: var(--color-surface); }
+
+@media (min-width: 640px) {
+  .auth-notice { flex-direction: row; align-items: center; justify-content: space-between; }
+}
+
+@media (min-width: 1024px) {
+  .schedule-hero { padding-top: var(--space-20); }
+  .schedule-hero h1 { font-size: 4.5rem; }
+}
+
+@media (min-width: 1280px) {
+  .schedule-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

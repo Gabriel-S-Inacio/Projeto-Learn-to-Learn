@@ -1,0 +1,35 @@
+.category-grid {
+  display: grid;
+  gap: var(--space-5);
+  padding-bottom: var(--space-24);
+}
+
+.category-card {
+  position: relative;
+  overflow: hidden;
+  padding: var(--space-8);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-large);
+  background: var(--color-surface);
+}
+
+.category-card__dot { position: absolute; top: 32px; right: 32px; width: 12px; height: 12px; border-radius: 50%; background: var(--color-accent); }
+.category-card__icon { display: grid; width: 56px; height: 56px; place-items: center; border-radius: var(--radius-base); color: var(--color-primary); background: var(--color-soft-green); }
+.category-card__index { margin-top: 36px; color: var(--color-olive); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.15em; }
+.category-card h2 { margin-top: var(--space-2); color: var(--color-primary); font-family: var(--font-editorial); font-size: 2.25rem; font-weight: 400; }
+.category-card__description { min-height: 80px; margin-top: var(--space-4); color: var(--color-muted-text); font-size: 0.875rem; line-height: 2; }
+.category-card ul { display: grid; gap: var(--space-3); margin-top: var(--space-7); padding-top: var(--space-6); border-top: 1px solid var(--color-border); color: var(--color-primary); font-size: 0.875rem; font-weight: 500; }
+
+.curiosity { border-block: 1px solid var(--color-border); background: var(--color-muted); }
+.curiosity__inner { display: grid; width: min(100% - 40px, var(--container-wide)); gap: var(--space-12); margin-inline: auto; padding-block: var(--space-20); }
+.curiosity__copy .editorial-heading { margin-top: var(--space-5); }
+.curiosity__copy > p { max-width: 576px; margin-top: var(--space-6); color: var(--color-muted-text); font-size: 1.125rem; line-height: 1.78; }
+.curiosity__copy .button { margin-top: var(--space-8); }
+.curiosity__insight { display: grid; min-height: 280px; place-items: center; align-content: center; padding: var(--space-10); border-radius: var(--radius-large); color: var(--color-background); background: var(--color-olive); text-align: center; }
+.curiosity__insight svg { color: var(--color-accent); }
+.curiosity__insight p { max-width: 320px; margin-top: var(--space-5); font-family: var(--font-editorial); font-size: 2.25rem; line-height: 1.12; }
+
+@media (min-width: 1024px) {
+  .category-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .curiosity__inner { width: min(100% - 64px, var(--container-wide)); grid-template-columns: 1.15fr 0.85fr; }
+}

@@ -1,0 +1,26 @@
+.about-hero__aside { max-width: 576px; color: var(--color-muted-text); font-size: 1.125rem; line-height: 1.78; }
+.values-section { background: var(--color-primary); }
+.values-grid { display: grid; gap: var(--space-8); padding-block: var(--space-16); }
+.value-card { padding: var(--space-7); border-radius: var(--radius-card); color: var(--color-soft-green); background: var(--color-primary-hover); }
+.value-card > svg { color: var(--color-accent); }
+.value-card h2 { margin-top: var(--space-8); color: var(--color-background); font-family: var(--font-editorial); font-size: 2rem; font-weight: 400; }
+.value-card > p { margin-top: var(--space-4); font-size: 0.875rem; line-height: 2; }
+.value-card--quote { color: var(--color-primary); background: var(--color-background); }
+.value-card--quote > svg { color: var(--color-primary); }
+.value-card--quote > p { margin-top: var(--space-8); font-family: var(--font-editorial); font-size: 2rem; line-height: 1.2; }
+.value-card--quote > span { display: block; width: 8px; height: 8px; margin-top: var(--space-8); border-radius: 50%; background: var(--color-accent); }
+.teacher-section { display: grid; gap: var(--space-12); padding-block: var(--space-24); }
+.teacher-portrait { position: relative; min-height: 360px; overflow: hidden; border-radius: var(--radius-large); background: var(--color-soft-green); }
+.teacher-portrait__shape { position: absolute; top: 48px; left: -48px; width: 256px; height: 256px; border-radius: 50%; background: var(--color-supporting-olive); }
+.teacher-portrait__label { position: absolute; right: 40px; bottom: 40px; left: 40px; padding: var(--space-6); border-radius: var(--radius-base); color: var(--color-background); background: var(--color-primary); }
+.teacher-portrait__label small { display: block; color: var(--color-accent); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; }
+.teacher-portrait__label strong { display: block; margin-top: var(--space-1); font-family: var(--font-editorial); font-size: 2.25rem; font-weight: 400; }
+.teacher-portrait__initial { position: absolute; top: 36px; right: 36px; display: grid; width: 64px; height: 64px; place-items: center; border-radius: 50%; color: var(--color-primary); background: var(--color-accent); font-size: 1.5rem; }
+.teacher-section__copy .editorial-heading { margin-top: var(--space-5); }
+.teacher-section__copy > p { margin-top: var(--space-5); color: var(--color-muted-text); font-size: 1.125rem; line-height: 1.78; }
+.teacher-section__copy .button { margin-top: var(--space-8); }
+
+@media (min-width: 1024px) {
+  .values-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .teacher-section { grid-template-columns: 0.82fr 1.18fr; }
+}
