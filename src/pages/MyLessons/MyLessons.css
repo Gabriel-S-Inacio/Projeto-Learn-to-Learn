@@ -1,10 +1,33 @@
 .lessons-page { min-height: 68vh; }
 .lessons-hero { padding-block: var(--space-16) var(--space-12); }
-.lessons-hero h1 { margin-top: var(--space-6); color: var(--color-primary); font-family: var(--font-editorial); font-size: 3.75rem; font-weight: 400; line-height: 0.94; }
+.lessons-hero h1 { margin-top: var(--space-6); color: var(--color-primary); font-family: var(--font-editorial); font-size: 3.75rem; font-weight: 400; line-height: .94; }
 .lessons-hero > p { max-width: 576px; margin-top: var(--space-5); color: var(--color-muted-text); font-size: 1.125rem; line-height: 1.78; }
 .lessons-content { padding-bottom: var(--space-24); }
 .lessons-content .state-panel { padding-block: var(--space-12); }
-.lessons-content .button { margin-top: var(--space-6); }
+.lessons-content .state-panel .button { margin-top: var(--space-6); }
+.lessons-content .state-panel > p { margin-top: var(--space-3); }
+.lessons-feedback { margin-bottom: var(--space-6); padding: var(--space-4) var(--space-5); border-radius: 14px; font-size: .9rem; }
+.lessons-feedback--success { color: var(--color-primary); background: var(--color-soft-green); }
+.lessons-feedback--error { color: #8c3434; border: 1px solid #e7b8b8; background: #fff1f1; }
+.lessons-list > h2 { margin-bottom: var(--space-6); color: var(--color-primary); font-family: var(--font-editorial); font-size: 2.25rem; font-weight: 400; }
+.lessons-list { display: grid; gap: var(--space-5); }
+.lesson-card { display: grid; gap: var(--space-5); padding: var(--space-6); border: 1px solid var(--color-border); border-radius: var(--radius-card); background: var(--color-surface); }
+.lesson-card__date span { display: block; color: var(--color-muted-text); font-size: .85rem; text-transform: capitalize; }
+.lesson-card__date strong { display: block; margin-top: var(--space-1); color: var(--color-primary); font-family: var(--font-editorial); font-size: 2rem; font-weight: 400; }
+.lesson-card__meta span { display: block; color: var(--color-primary); font-weight: 700; }
+.lesson-card__meta small { display: block; margin-top: var(--space-2); color: var(--color-muted-text); }
+.lesson-card__actions { display: flex; flex-wrap: wrap; gap: var(--space-3); }
+.lesson-card__actions .button { min-height: 42px; }
+.lesson-card__rule { grid-column: 1 / -1; color: var(--color-destructive); font-size: .8rem; }
+.button--danger { color: var(--color-destructive); border-color: #d8aaaa; background: transparent; }
+.button--danger:hover { background: #fff1f1; }
+.reschedule-current { margin-bottom: var(--space-5); padding: var(--space-4); border-radius: 12px; background: var(--color-muted); }
+.dialog-card .form-field { margin-block: var(--space-5); }
+
+@media (min-width: 760px) {
+  .lesson-card { grid-template-columns: 1fr 1.5fr auto; align-items: center; }
+  .lesson-card__actions { justify-content: flex-end; }
+}
 
 @media (min-width: 1024px) {
   .lessons-hero { padding-top: var(--space-20); }

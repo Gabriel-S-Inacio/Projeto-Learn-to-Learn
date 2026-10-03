@@ -42,3 +42,5 @@ export const HomeIcon = (props) => <IconBase {...props}><path d="m3 11 9-8 9 8" 
 export const Instagram = (props) => <IconBase {...props}><rect x="3" y="3" width="18" height="18" rx="5" /><circle cx="12" cy="12" r="4" /><path d="M17.5 6.5h.01" /></IconBase>
 export const Play = (props) => <IconBase {...props}><path d="m8 5 11 7-11 7Z" /></IconBase>
 export const Asterisk = (props) => <IconBase {...props}><path d="M12 2v20M4 7l16 10M20 7 4 17" /></IconBase>
+export const Repeat = (props) => <IconBase {...props}><path d="M17 2l4 4-4 4" /><path d="M3 11V9a3 3 0 0 1 3-3h15M7 22l-4-4 4-4" /><path d="M21 13v2a3 3 0 0 1-3 3H3" /></IconBase>
+export const Notebook = (props) => <IconBase {...props}><rect x="6" y="3" width="14" height="18" rx="2" /><path d="M10 7h6M10 11h6M3 7h3M3 12h3M3 17h3" /></IconBase>

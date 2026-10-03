@@ -55,13 +55,19 @@
     0 8px 10px -6px rgba(31, 77, 58, 0.08);
   --shadow-hero: 0 28px 70px rgba(31, 77, 58, 0.22);
 
-  --container-wide: 1280px;
+  --container-wide: 1216px;
   --container-medium: 1200px;
   --container-narrow: 1120px;
   --header-height: 80px;
 
   --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-reveal: 560ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+@media (max-width: 340px) {
+  :root {
+    --text-h1: 3rem;
+  }
 }
 
 @media (min-width: 1024px) {

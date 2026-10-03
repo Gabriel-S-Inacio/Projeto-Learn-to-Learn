@@ -1,6 +1,6 @@
 .home-hero {
   display: grid;
-  width: min(100% - 40px, var(--container-wide));
+  width: min(calc(100% - 40px), var(--container-wide));
   align-items: center;
   gap: var(--space-12);
   margin-inline: auto;
@@ -280,7 +280,7 @@
 
 @media (min-width: 1024px) {
   .home-hero {
-    width: min(100% - 64px, var(--container-wide));
+    width: min(calc(100% - 64px), var(--container-wide));
     grid-template-columns: 1fr 0.94fr;
     padding-block: var(--space-24);
   }

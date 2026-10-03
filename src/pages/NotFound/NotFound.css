@@ -7,3 +7,10 @@
 .not-found p { margin-top: var(--space-6); color: #64748b; line-height: 1.6; }
 .not-found__button { min-height: 42px; margin-top: var(--space-8); padding-inline: var(--space-5); color: #fff; border-radius: 12px; background: #1769ff; box-shadow: 0 4px 10px rgba(23, 105, 255, 0.25); }
 .not-found__button:hover { background: #0d57dc; }
+
+@media (max-width: 480px) {
+  .not-found { padding: var(--space-4); }
+  .not-found__card { padding: 56px var(--space-6); }
+  .not-found h1 { font-size: 2.25rem; }
+  .not-found__button { width: 100%; }
+}

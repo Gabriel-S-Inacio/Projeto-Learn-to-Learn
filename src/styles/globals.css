@@ -82,7 +82,7 @@ ul {
 }
 
 .container {
-  width: min(100% - 40px, var(--container-wide));
+  width: min(calc(100% - 40px), var(--container-wide));
   margin-inline: auto;
 }
 
@@ -136,7 +136,7 @@ ul {
 
 @media (min-width: 1024px) {
   .container {
-    width: min(100% - 64px, var(--container-wide));
+    width: min(calc(100% - 64px), var(--container-wide));
   }
 
   .section-space {

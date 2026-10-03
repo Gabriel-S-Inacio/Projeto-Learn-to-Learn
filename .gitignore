@@ -1,6 +1,11 @@
 node_modules/
 dist/
 .vite/
+.audit/
+.env
+.env.*
+!.env.example
+!backend/.env.example
 *.local
 *.log
 .DS_Store

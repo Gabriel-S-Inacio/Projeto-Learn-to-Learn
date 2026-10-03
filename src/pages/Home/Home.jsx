@@ -3,10 +3,12 @@ import heroStudy from '../../assets/images/hero-study.jpg'
 import ContentCard from '../../components/shared/ContentCard'
 import CtaBanner from '../../components/shared/CtaBanner'
 import MethodCard from '../../components/shared/MethodCard'
+import LeadCapture from '../../components/shared/LeadCapture'
 import Button from '../../components/ui/Button'
 import EditorialHeading from '../../components/ui/EditorialHeading'
 import Eyebrow from '../../components/ui/Eyebrow'
 import { benefits, homeContents, methodSteps } from '../../data/content'
+import { trackEvent } from '../../services/analyticsService'
 import './Home.css'
 
 export default function Home() {
@@ -22,7 +24,7 @@ export default function Home() {
             Construa autonomia, confiança e repertório para usar o idioma no mundo real — no seu ritmo e com método.
           </p>
           <div className="home-hero__actions">
-            <Button to="/agendar">Começar minha jornada <ArrowRight size={17} /></Button>
+            <Button onClick={() => void trackEvent('cta_clicked', { metadata: { cta: 'schedule_primary', location: 'home_hero' } }).catch(() => undefined)} to="/agendar">Começar minha jornada <ArrowRight size={17} /></Button>
             <Button to="/metodo" variant="outline">Conhecer o método</Button>
           </div>
         </div>
@@ -85,6 +87,8 @@ export default function Home() {
           {homeContents.map((item) => <ContentCard {...item} key={item.title} />)}
         </div>
       </section>
+
+      <LeadCapture />
 
       <CtaBanner
         description="Ele começa quando você decide dar o próximo passo."

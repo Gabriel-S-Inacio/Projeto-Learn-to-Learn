@@ -2,7 +2,7 @@ import { ArrowRight, Sparkles } from '../../assets/icons/Icons'
 import PageHero from '../../components/shared/PageHero'
 import Button from '../../components/ui/Button'
 import Eyebrow from '../../components/ui/Eyebrow'
-import { methodSteps } from '../../data/content'
+import { journeyIcons, methodSteps } from '../../data/content'
 import './HowItWorks.css'
 
 export default function HowItWorks() {
@@ -17,7 +17,9 @@ export default function HowItWorks() {
 
       <section className="journey container container--narrow">
         <div className="journey__line" aria-hidden="true" />
-        {methodSteps.map(({ icon: Icon, index, longText, subtitle, title }, itemIndex) => (
+        {methodSteps.map(({ index, longText, subtitle, title }, itemIndex) => {
+          const Icon = journeyIcons[itemIndex]
+          return (
           <article className={`journey-card ${itemIndex % 2 ? 'journey-card--right' : ''}`} key={title}>
             <div className="journey-card__body">
               <span className="journey-card__index">{index}</span>
@@ -27,7 +29,8 @@ export default function HowItWorks() {
             </div>
             <span className="journey-card__icon"><Icon size={21} /></span>
           </article>
-        ))}
+          )
+        })}
       </section>
 
       <section className="journey-cta">

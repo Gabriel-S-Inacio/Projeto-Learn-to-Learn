@@ -3,12 +3,15 @@ import { Link, NavLink, useLocation } from 'react-router-dom'
 import { ArrowUpRight, Close, Menu } from '../../assets/icons/Icons'
 import { publicNavigation } from '../../data/navigation'
 import Button from '../ui/Button'
+import { useAuth } from '../../context/AuthContext'
 import MobileNav from './MobileNav'
 import './layout.css'
+import { trackEvent } from '../../services/analyticsService'
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const location = useLocation()
+  const { status, user, signOut } = useAuth()
 
   useEffect(() => {
     setIsMenuOpen(false)
@@ -32,8 +35,13 @@ export default function Header() {
         </nav>
 
         <div className="desktop-actions">
-          <Link className="desktop-actions__login" to="/minhas-aulas">Entrar</Link>
-          <Button className="site-header__cta" to="/agendar">
+          {status === 'authenticated' ? (
+            <>
+              <Link className="desktop-actions__login" to={user.role === 'ADMIN' ? '/admin/agenda' : '/minhas-aulas'}>{user.name.split(' ')[0]}</Link>
+              <button className="desktop-actions__logout" onClick={() => void signOut()} type="button">Sair</button>
+            </>
+          ) : <Link className="desktop-actions__login" to="/login">Entrar</Link>}
+          <Button className="site-header__cta" onClick={() => void trackEvent('cta_clicked', { metadata: { cta: 'schedule_header', location: 'header' } }).catch(() => undefined)} to="/agendar">
             Agendar aula <ArrowUpRight size={15} />
           </Button>
         </div>

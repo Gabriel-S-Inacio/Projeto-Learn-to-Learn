@@ -1,0 +1,92 @@
+import { bigint, index, integer, jsonb, pgEnum, pgTable, serial, text, timestamp, unique, uniqueIndex, varchar } from 'drizzle-orm/pg-core'
+
+export const userRole = pgEnum('user_role', ['STUDENT', 'ADMIN'])
+export const lessonSlotStatus = pgEnum('lesson_slot_status', ['AVAILABLE', 'BOOKED', 'BLOCKED', 'COMPLETED'])
+export const leadStatus = pgEnum('lead_status', ['NEW', 'INTERESTED', 'SCHEDULED', 'TRIAL_COMPLETED', 'CONVERTED', 'LOST'])
+export const leadSource = pgEnum('lead_source', ['FORM', 'REGISTER', 'SCHEDULE', 'MANUAL'])
+
+export const users = pgTable('users', {
+  id: serial('id').primaryKey(),
+  name: varchar('name', { length: 120 }).notNull(),
+  email: varchar('email', { length: 320 }).notNull(),
+  phone: varchar('phone', { length: 32 }),
+  passwordHash: text('password_hash').notNull(),
+  role: userRole('role').notNull().default('STUDENT'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [uniqueIndex('users_email_unique').on(table.email)])
+
+export const authSessions = pgTable('auth_sessions', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  tokenHash: varchar('token_hash', { length: 64 }).notNull().unique(),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [index('auth_sessions_user_id_idx').on(table.userId), index('auth_sessions_expires_at_idx').on(table.expiresAt)])
+
+export const lessonSlots = pgTable('lesson_slots', {
+  id: serial('id').primaryKey(),
+  startsAt: timestamp('starts_at', { withTimezone: true }).notNull(),
+  durationMinutes: integer('duration_minutes').notNull().default(60),
+  status: lessonSlotStatus('status').notNull().default('AVAILABLE'),
+  notes: text('notes'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [uniqueIndex('lesson_slots_starts_at_unique').on(table.startsAt), index('lesson_slots_status_starts_at_idx').on(table.status, table.startsAt)])
+
+export const lessonBookings = pgTable('lesson_bookings', {
+  id: serial('id').primaryKey(),
+  slotId: integer('slot_id').notNull().references(() => lessonSlots.id, { onDelete: 'restrict' }),
+  studentId: integer('student_id').notNull().references(() => users.id, { onDelete: 'restrict' }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [unique('lesson_bookings_slot_unique').on(table.slotId), index('lesson_bookings_student_id_idx').on(table.studentId)])
+
+export const leads = pgTable('leads', {
+  id: serial('id').primaryKey(),
+  name: varchar('name', { length: 120 }).notNull(),
+  email: varchar('email', { length: 320 }).notNull(),
+  phone: varchar('phone', { length: 32 }).notNull(),
+  source: leadSource('source').notNull(),
+  utmSource: varchar('utm_source', { length: 200 }),
+  utmMedium: varchar('utm_medium', { length: 200 }),
+  utmCampaign: varchar('utm_campaign', { length: 200 }),
+  status: leadStatus('status').notNull().default('NEW'),
+  convertedUserId: integer('converted_user_id').references(() => users.id, { onDelete: 'set null' }),
+  scheduledAt: timestamp('scheduled_at', { withTimezone: true }),
+  trialCompletedAt: timestamp('trial_completed_at', { withTimezone: true }),
+  convertedAt: timestamp('converted_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  uniqueIndex('leads_email_unique').on(table.email),
+  uniqueIndex('leads_converted_user_unique').on(table.convertedUserId),
+  index('leads_status_idx').on(table.status),
+  index('leads_source_idx').on(table.source),
+  index('leads_created_at_idx').on(table.createdAt),
+])
+
+export const analyticsEvents = pgTable('analytics_events', {
+  id: bigint('id', { mode: 'number' }).primaryKey().generatedAlwaysAsIdentity(),
+  eventName: varchar('event_name', { length: 64 }).notNull(),
+  userId: integer('user_id').references(() => users.id, { onDelete: 'set null' }),
+  leadId: integer('lead_id').references(() => leads.id, { onDelete: 'set null' }),
+  sessionId: varchar('session_id', { length: 128 }),
+  path: varchar('path', { length: 2048 }),
+  utmSource: varchar('utm_source', { length: 200 }),
+  utmMedium: varchar('utm_medium', { length: 200 }),
+  utmCampaign: varchar('utm_campaign', { length: 200 }),
+  metadata: jsonb('metadata').notNull().default({}),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  index('analytics_events_name_created_idx').on(table.eventName, table.createdAt),
+  index('analytics_events_created_at_idx').on(table.createdAt),
+  index('analytics_events_user_id_idx').on(table.userId),
+  index('analytics_events_lead_id_idx').on(table.leadId),
+  index('analytics_events_session_id_idx').on(table.sessionId),
+])
+
+export type UserRole = (typeof userRole.enumValues)[number]
+export type SlotStatus = (typeof lessonSlotStatus.enumValues)[number]
+export type LeadStatus = (typeof leadStatus.enumValues)[number]
+export type LeadSource = (typeof leadSource.enumValues)[number]

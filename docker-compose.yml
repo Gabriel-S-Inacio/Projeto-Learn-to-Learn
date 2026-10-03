@@ -1,0 +1,69 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: learn_to_learn
+      POSTGRES_USER: learn_to_learn
+      POSTGRES_PASSWORD: learn_to_learn_local
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U learn_to_learn -d learn_to_learn"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    ports:
+      - "5433:5432"
+    volumes:
+      - learn_to_learn_postgres:/var/lib/postgresql/data
+
+  backend:
+    build:
+      context: ./backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      DATABASE_URL: postgresql://learn_to_learn:learn_to_learn_local@postgres:5432/learn_to_learn
+      AUTH_SECRET: ${AUTH_SECRET:-}
+      FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-http://localhost:5173}
+      SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-false}
+      ADMIN_NAME: ${ADMIN_NAME:-}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+    ports:
+      - "3001:3001"
+    command: ["sh", "-c", "node dist/scripts/migrate.js && node scripts/seed-admin.mjs && npm start"]
+
+  backend-test:
+    profiles: ["test"]
+    build:
+      context: ./backend
+      target: test
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+    environment:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://learn_to_learn:learn_to_learn_test@postgres-test:5432/learn_to_learn_test
+      AUTH_SECRET: test-secret-with-at-least-thirty-two-characters
+      FRONTEND_ORIGIN: http://localhost:5173
+    command: ["sh", "-c", "npm run db:migrate && npm test"]
+
+  postgres-test:
+    profiles: ["test"]
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: learn_to_learn_test
+      POSTGRES_USER: learn_to_learn
+      POSTGRES_PASSWORD: learn_to_learn_test
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U learn_to_learn -d learn_to_learn_test"]
+      interval: 2s
+      timeout: 5s
+      retries: 15
+    tmpfs:
+      - /var/lib/postgresql/data
+
+volumes:
+  learn_to_learn_postgres:

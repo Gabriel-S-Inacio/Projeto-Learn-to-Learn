@@ -1,4 +1,4 @@
-import { Book, Check, Ear, Headphones, Message, Search, Sliders, Target } from '../assets/icons/Icons'
+import { Book, Check, Ear, Headphones, Message, Notebook, Repeat, Search, Sliders, Target } from '../assets/icons/Icons'
 
 export const benefits = [
   { icon: Book, title: 'Exposição com contexto' },
@@ -33,6 +33,9 @@ export const methodSteps = [
   },
 ]
 
+export const methodPillarIcons = [Target, Repeat, Message]
+export const journeyIcons = [Ear, Repeat, Message]
+
 export const homeContents = [
   { label: 'Comece aqui', title: 'O mapa da sua jornada', icon: Target, tone: 'soft' },
   { label: 'Aulas', title: 'Contexto antes da regra', icon: Book, tone: 'olive' },
@@ -53,7 +56,7 @@ export const contentCategories = [
     items: ['Leituras graduadas', 'Escuta com propósito', 'Conteúdo do seu interesse'],
   },
   {
-    icon: Sliders,
+    icon: Notebook,
     title: 'Ferramentas',
     description: 'Sistemas simples para transformar intenção em uma rotina possível.',
     items: ['Mapa de estudos', 'Revisão espaçada', 'Registro de progresso'],
