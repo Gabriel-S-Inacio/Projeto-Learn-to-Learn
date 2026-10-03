@@ -1,5 +1,6 @@
-import { availableSlotsMock } from '../data/schedule.mock'
+import { apiRequest } from './apiClient'
 
 export async function getAvailableSlots() {
-  return structuredClone(availableSlotsMock)
+  const response = await apiRequest('/schedule/available')
+  return response.slots
 }

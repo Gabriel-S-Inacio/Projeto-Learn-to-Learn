@@ -5,7 +5,7 @@ import QuotePanel from '../../components/shared/QuotePanel'
 import Button from '../../components/ui/Button'
 import EditorialHeading from '../../components/ui/EditorialHeading'
 import Eyebrow from '../../components/ui/Eyebrow'
-import { methodSteps } from '../../data/content'
+import { methodPillarIcons, methodSteps } from '../../data/content'
 import './Method.css'
 
 export default function Method() {
@@ -19,7 +19,7 @@ export default function Method() {
 
       <section className="method-pillars">
         <div className="method-pillars__grid container">
-          {methodSteps.map((step) => <MethodCard {...step} key={step.title} text={step.longText} variant="accent" />)}
+          {methodSteps.map((step, index) => <MethodCard {...step} icon={methodPillarIcons[index]} key={step.title} text={step.longText} variant="accent" />)}
         </div>
       </section>
 

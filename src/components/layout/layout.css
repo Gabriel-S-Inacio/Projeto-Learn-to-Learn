@@ -9,7 +9,7 @@
 
 .site-header__inner {
   display: flex;
-  width: min(100% - 40px, var(--container-wide));
+  width: min(calc(100% - 40px), var(--container-wide));
   height: var(--header-height);
   align-items: center;
   justify-content: space-between;
@@ -56,13 +56,16 @@
 }
 
 .mobile-nav__link,
-.mobile-nav__cta {
+.mobile-nav__cta,
+.mobile-nav__logout {
   padding: 12px;
   border-radius: 12px;
   color: var(--color-primary);
   font-size: 0.875rem;
   font-weight: 600;
 }
+
+.mobile-nav__logout { background: transparent; text-align: left; cursor: pointer; }
 
 .mobile-nav__link:hover,
 .mobile-nav__link.active {
@@ -83,7 +86,7 @@
 
 .site-footer__grid {
   display: grid;
-  width: min(100% - 40px, var(--container-wide));
+  width: min(calc(100% - 40px), var(--container-wide));
   gap: var(--space-10);
   margin-inline: auto;
   padding-block: var(--space-14);
@@ -143,7 +146,7 @@
 @media (min-width: 1024px) {
   .site-header__inner,
   .site-footer__grid {
-    width: min(100% - 64px, var(--container-wide));
+    width: min(calc(100% - 64px), var(--container-wide));
   }
 
   .desktop-nav {
@@ -175,6 +178,8 @@
     font-size: 0.875rem;
     font-weight: 600;
   }
+
+  .desktop-actions__logout { padding: 0; color: var(--color-muted-text); background: transparent; font-size: .8rem; cursor: pointer; }
 
   .site-header__cta {
     min-height: 44px;

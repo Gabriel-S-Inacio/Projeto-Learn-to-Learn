@@ -1,0 +1,48 @@
+.admin-nav { display: flex; gap: var(--space-3); }
+.admin-nav a { padding: 7px 10px; border-radius: var(--radius-pill); color: var(--color-muted-text); font-size: .78rem; font-weight: 700; }
+.admin-nav a.is-active { color: var(--color-primary); background: var(--color-soft-green); }
+.admin-intro--leads { align-items: end; }
+.lead-period { display: grid; gap: var(--space-2); }
+.lead-period label { color: var(--color-primary); font-size: .75rem; font-weight: 700; }
+.lead-period select, .lead-filters select, .lead-row__action select { min-height: 42px; padding: 9px 12px; border: 1px solid var(--color-border); border-radius: 12px; color: var(--color-primary); background: var(--color-surface); }
+.lead-metrics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); margin-top: var(--space-8); }
+.lead-metrics article { padding: var(--space-5); border: 1px solid var(--color-border); border-radius: var(--radius-base); background: var(--color-surface); }
+.lead-metrics strong, .lead-metrics span { display: block; }
+.lead-metrics strong { color: var(--color-primary); font-family: var(--font-editorial); font-size: 2.2rem; font-weight: 400; }
+.lead-metrics span { margin-top: var(--space-1); color: var(--color-muted-text); font-size: .78rem; }
+.lead-funnel, .lead-panel { margin-top: var(--space-7); padding: var(--space-6); border: 1px solid var(--color-border); border-radius: var(--radius-card); background: var(--color-surface); box-shadow: var(--shadow-soft); }
+.lead-funnel h2, .lead-panel h2 { color: var(--color-primary); font-family: var(--font-editorial); font-size: 2rem; font-weight: 400; }
+.lead-funnel > div > p, .lead-panel__heading p { margin-top: var(--space-2); color: var(--color-muted-text); font-size: .8rem; }
+.lead-funnel__steps { display: grid; gap: var(--space-3); margin-top: var(--space-6); }
+.lead-funnel__steps article { position: relative; padding: var(--space-4); border-radius: var(--radius-base); background: var(--color-muted); }
+.lead-funnel__steps small, .lead-funnel__steps strong, .lead-funnel__steps span { display: block; }
+.lead-funnel__steps small { color: var(--color-muted-text); font-size: .65rem; }
+.lead-funnel__steps strong { margin-top: var(--space-2); color: var(--color-primary); font-family: var(--font-editorial); font-size: 2rem; font-weight: 400; }
+.lead-funnel__steps span { color: var(--color-muted-text); font-size: .75rem; }
+.lead-funnel__rate { margin-top: var(--space-5); color: var(--color-muted-text); font-size: .85rem; }
+.lead-funnel__rate strong { color: var(--color-primary); }
+.lead-panel__heading { display: flex; flex-direction: column; gap: var(--space-4); }
+.lead-filters { display: flex; flex-direction: column; gap: var(--space-2); }
+.lead-list { display: grid; gap: var(--space-3); margin-top: var(--space-6); }
+.lead-row { display: grid; gap: var(--space-4); padding: var(--space-5); border: 1px solid var(--color-border); border-radius: var(--radius-base); }
+.lead-row strong, .lead-row span, .lead-row small, .lead-row a { display: block; }
+.lead-row__person strong, .lead-row__user strong { color: var(--color-primary); }
+.lead-row__person a, .lead-row__person span, .lead-row__user span, .lead-row__source small { margin-top: 3px; color: var(--color-muted-text); font-size: .76rem; overflow-wrap: anywhere; }
+.lead-row__source > span { color: var(--color-primary); font-size: .78rem; font-weight: 700; }
+.lead-status { width: max-content; padding: 6px 9px; border-radius: var(--radius-pill); color: var(--color-primary); background: var(--color-soft-green); font-size: .64rem; font-weight: 800; text-transform: uppercase; }
+.lead-status--converted { background: #d7ead9; }
+.lead-status--lost { color: #7b4949; background: #f4e3e3; }
+.lead-row__date { margin-top: var(--space-2); color: var(--color-muted-text); font-size: .72rem; }
+.lead-row__action span { color: var(--color-muted-text); font-size: .75rem; }
+
+@media (min-width: 680px) {
+  .lead-metrics { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .lead-funnel__steps { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .lead-panel__heading { flex-direction: row; align-items: flex-end; justify-content: space-between; }
+  .lead-filters { flex-direction: row; }
+}
+
+@media (min-width: 1040px) {
+  .lead-row { grid-template-columns: 1.35fr .9fr .75fr .9fr auto; align-items: center; }
+  .lead-period { justify-self: end; min-width: 190px; }
+}

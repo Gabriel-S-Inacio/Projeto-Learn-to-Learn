@@ -21,7 +21,7 @@
 .category-card ul { display: grid; gap: var(--space-3); margin-top: var(--space-7); padding-top: var(--space-6); border-top: 1px solid var(--color-border); color: var(--color-primary); font-size: 0.875rem; font-weight: 500; }
 
 .curiosity { border-block: 1px solid var(--color-border); background: var(--color-muted); }
-.curiosity__inner { display: grid; width: min(100% - 40px, var(--container-wide)); gap: var(--space-12); margin-inline: auto; padding-block: var(--space-20); }
+.curiosity__inner { display: grid; width: min(calc(100% - 40px), var(--container-wide)); gap: var(--space-12); margin-inline: auto; padding-block: var(--space-20); }
 .curiosity__copy .editorial-heading { margin-top: var(--space-5); }
 .curiosity__copy > p { max-width: 576px; margin-top: var(--space-6); color: var(--color-muted-text); font-size: 1.125rem; line-height: 1.78; }
 .curiosity__copy .button { margin-top: var(--space-8); }
@@ -31,5 +31,5 @@
 
 @media (min-width: 1024px) {
   .category-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .curiosity__inner { width: min(100% - 64px, var(--container-wide)); grid-template-columns: 1.15fr 0.85fr; }
+  .curiosity__inner { width: min(calc(100% - 64px), var(--container-wide)); grid-template-columns: 1.15fr 0.85fr; }
 }
