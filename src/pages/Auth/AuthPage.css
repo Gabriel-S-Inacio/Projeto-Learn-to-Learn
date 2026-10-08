@@ -17,6 +17,10 @@
 .form-error { padding: var(--space-3) var(--space-4); color: #8c3434; border: 1px solid #e7b8b8; border-radius: 12px; background: #fff1f1; font-size: .875rem; line-height: 1.5; }
 .form-success { padding: var(--space-3) var(--space-4); color: var(--color-primary); border-radius: 12px; background: var(--color-soft-green); font-size: .875rem; }
 .auth-form .button { width: 100%; }
+.turnstile-field { display: grid; min-height: 66px; gap: var(--space-2); }
+.turnstile-field > div { width: 100%; }
+.turnstile-field small, .turnstile-status { color: var(--color-muted-text); font-size: .75rem; line-height: 1.4; }
+.turnstile-status--error { color: var(--color-destructive); }
 .auth-card__alternate { margin-top: var(--space-6); color: var(--color-muted-text); font-size: .875rem; text-align: center; }
 .auth-card__alternate a { color: var(--color-primary); font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
 

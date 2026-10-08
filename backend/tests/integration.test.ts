@@ -1,12 +1,34 @@
 import bcrypt from 'bcryptjs'
 import { spawn } from 'node:child_process'
 import request from 'supertest'
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createApp } from '../src/app.js'
 import { pool } from '../src/db/client.js'
 import { isAtLeast24HoursAway } from '../src/bookings/service.js'
+import { errorHandler } from '../src/http/errors.js'
+import { resetRateLimitsForTests } from '../src/security/rateLimit.js'
 
 const app = createApp()
+const turnstileToken = 'valid-turnstile-token'
+
+function mockExternalProviders(input?: { turnstileSuccess?: boolean; emailStatus?: number }) {
+  return vi.fn(async (resource: string | URL | Request) => {
+    const url = String(resource)
+    if (url.includes('challenges.cloudflare.com/turnstile')) {
+      return new Response(JSON.stringify({ success: input?.turnstileSuccess ?? true }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    }
+    if (url.includes('api.resend.com/emails')) {
+      return new Response(JSON.stringify({ id: 'test-email-id' }), {
+        status: input?.emailStatus ?? 200,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    }
+    throw new Error('Unexpected external request in tests.')
+  })
+}
 
 function runAdminSeed(
   environment: Record<string, string>,
@@ -35,7 +57,8 @@ function runAdminSeed(
 }
 
 async function resetDatabase() {
-  await pool.query('TRUNCATE analytics_events, leads, auth_sessions, lesson_bookings, lesson_slots, users RESTART IDENTITY CASCADE')
+  resetRateLimitsForTests()
+  await pool.query('TRUNCATE notification_deliveries, analytics_events, leads, auth_sessions, lesson_bookings, lesson_slots, users RESTART IDENTITY CASCADE')
 }
 
 async function registerStudent(email: string, password = 'password-123') {
@@ -45,6 +68,7 @@ async function registerStudent(email: string, password = 'password-123') {
     email,
     phone: '11999999999',
     password,
+    turnstileToken,
   })
   expect(response.status).toBe(201)
   return { agent, user: response.body.user }
@@ -57,7 +81,7 @@ async function createAdmin(email = 'admin@example.test', password = 'admin-passw
     [email, passwordHash],
   )
   const agent = request.agent(app)
-  const response = await agent.post('/api/auth/login').send({ email, password })
+  const response = await agent.post('/api/auth/login').send({ email, password, turnstileToken })
   expect(response.status).toBe(200)
   return agent
 }
@@ -79,7 +103,11 @@ beforeAll(async () => {
   await pool.query('SELECT 1')
 })
 
-beforeEach(resetDatabase)
+beforeEach(async () => {
+  vi.stubGlobal('fetch', mockExternalProviders())
+  await resetDatabase()
+})
+afterEach(() => vi.unstubAllGlobals())
 afterAll(() => pool.end())
 
 describe('authentication and authorization', () => {
@@ -97,9 +125,9 @@ describe('authentication and authorization', () => {
   it('rejects invalid registration, duplicate email and invalid login variants', async () => {
     expect((await request(app).post('/api/auth/register').send({ name: '', email: 'bad', phone: '', password: 'x' })).status).toBe(422)
     await registerStudent('duplicate@example.test')
-    expect((await request(app).post('/api/auth/register').send({ name: 'Outro', email: 'DUPLICATE@example.test', phone: '11999999999', password: 'password-123' })).status).toBe(409)
-    expect((await request(app).post('/api/auth/login').send({ email: 'missing@example.test', password: 'wrong-password' })).status).toBe(401)
-    expect((await request(app).post('/api/auth/login').send({ email: 'duplicate@example.test', password: 'wrong-password' })).status).toBe(401)
+    expect((await request(app).post('/api/auth/register').send({ name: 'Outro', email: 'DUPLICATE@example.test', phone: '11999999999', password: 'password-123', turnstileToken })).status).toBe(409)
+    expect((await request(app).post('/api/auth/login').send({ email: 'missing@example.test', password: 'wrong-password', turnstileToken })).status).toBe(401)
+    expect((await request(app).post('/api/auth/login').send({ email: 'duplicate@example.test', password: 'wrong-password', turnstileToken })).status).toBe(401)
     expect((await request(app).get('/api/auth/me')).status).toBe(401)
   })
 
@@ -110,6 +138,62 @@ describe('authentication and authorization', () => {
     expect((await student.get('/api/bookings/me')).status).toBe(200)
     expect((await student.get('/api/admin/schedule')).status).toBe(403)
     expect((await admin.get('/api/admin/schedule')).status).toBe(200)
+  })
+
+  it('requires backend antibot validation and rejects an invalid token', async () => {
+    const payload = {
+      name: 'Protected Student',
+      email: 'protected@example.test',
+      phone: '11999999999',
+      password: 'password-123',
+    }
+    const missing = await request(app).post('/api/auth/register').send(payload)
+    expect(missing.status).toBe(400)
+    expect(missing.body.error.code).toBe('ANTIBOT_TOKEN_REQUIRED')
+
+    vi.stubGlobal('fetch', mockExternalProviders({ turnstileSuccess: false }))
+    const invalid = await request(app).post('/api/auth/register').send({ ...payload, turnstileToken: 'invalid-token' })
+    expect(invalid.status).toBe(403)
+    expect(invalid.body.error.code).toBe('ANTIBOT_FAILED')
+    expect((await pool.query('SELECT count(*)::int AS count FROM users')).rows[0].count).toBe(0)
+  })
+
+  it('rate limits login and registration independently', async () => {
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      const response = await request(app).post('/api/auth/login').send({
+        email: 'missing@example.test',
+        password: 'wrong-password',
+        turnstileToken,
+      })
+      expect(response.status).toBe(401)
+    }
+    const limitedLogin = await request(app).post('/api/auth/login').send({
+      email: 'missing@example.test',
+      password: 'wrong-password',
+      turnstileToken,
+    })
+    expect(limitedLogin.status).toBe(429)
+    expect(limitedLogin.body.error.code).toBe('LOGIN_RATE_LIMITED')
+
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      const response = await request(app).post('/api/auth/register').send({
+        name: `Rate Student ${attempt}`,
+        email: `rate-${attempt}@example.test`,
+        phone: '11999999999',
+        password: 'password-123',
+        turnstileToken,
+      })
+      expect(response.status).toBe(201)
+    }
+    const limitedRegistration = await request(app).post('/api/auth/register').send({
+      name: 'Rate Student Limited',
+      email: 'rate-limited@example.test',
+      phone: '11999999999',
+      password: 'password-123',
+      turnstileToken,
+    })
+    expect(limitedRegistration.status).toBe(429)
+    expect(limitedRegistration.body.error.code).toBe('REGISTER_RATE_LIMITED')
   })
 })
 
@@ -169,6 +253,7 @@ describe('ADMIN seed', () => {
     const login = await admin.post('/api/auth/login').send({
       email: changedEnvironment.ADMIN_EMAIL,
       password: changedEnvironment.ADMIN_PASSWORD,
+      turnstileToken,
     })
     expect(login.status).toBe(200)
     expect(login.body.user.role).toBe('ADMIN')
@@ -232,6 +317,43 @@ describe('public schedule and booking', () => {
     const integrity = await pool.query('SELECT count(*)::int AS count FROM lesson_bookings WHERE slot_id = $1', [slot.id])
     expect(integrity.rows[0].count).toBe(1)
   })
+
+  it('sends and audits booking confirmation with lesson details', async () => {
+    const { agent } = await registerStudent('notified@example.test')
+    const slot = await createSlot(72, 'AVAILABLE', 45)
+    const response = await book(agent, slot.id)
+    expect(response.status).toBe(201)
+
+    const deliveries = await pool.query(
+      `SELECT channel, event, status, provider, failure_code
+       FROM notification_deliveries ORDER BY channel`,
+    )
+    expect(deliveries.rows).toEqual([
+      expect.objectContaining({ channel: 'EMAIL', event: 'BOOKING_CONFIRMATION', status: 'SENT', provider: 'resend', failure_code: null }),
+      expect.objectContaining({ channel: 'WHATSAPP', event: 'BOOKING_CONFIRMATION', status: 'SKIPPED', provider: 'disabled' }),
+    ])
+
+    const fetchMock = vi.mocked(fetch)
+    const emailCall = fetchMock.mock.calls.find(([resource]) => String(resource).includes('api.resend.com/emails'))
+    expect(emailCall).toBeTruthy()
+    const emailBody = JSON.parse(String(emailCall?.[1]?.body))
+    expect(emailBody.text).toContain('45 minutos')
+    expect(emailBody.text).toContain('aula experimental')
+  })
+
+  it('keeps a persisted booking when the email provider fails', async () => {
+    const { agent } = await registerStudent('email-failure@example.test')
+    vi.stubGlobal('fetch', mockExternalProviders({ emailStatus: 503 }))
+    const slot = await createSlot(72)
+    const response = await book(agent, slot.id)
+    expect(response.status).toBe(201)
+    expect((await pool.query('SELECT count(*)::int AS count FROM lesson_bookings')).rows[0].count).toBe(1)
+    expect((await pool.query('SELECT status FROM lesson_slots WHERE id = $1', [slot.id])).rows[0].status).toBe('BOOKED')
+    const delivery = await pool.query(
+      "SELECT status, failure_code FROM notification_deliveries WHERE channel = 'EMAIL' AND event = 'BOOKING_CONFIRMATION'",
+    )
+    expect(delivery.rows[0]).toEqual({ status: 'FAILED', failure_code: 'HTTP_503' })
+  })
 })
 
 describe('cancellation', () => {
@@ -259,6 +381,50 @@ describe('cancellation', () => {
     expect((await owner.delete(`/api/bookings/${id}`)).status).toBe(409)
     expect((await other.delete(`/api/bookings/${id}`)).status).toBe(403)
     expect((await owner.delete('/api/bookings/999999')).status).toBe(404)
+  })
+})
+
+describe('administrative cancellation', () => {
+  it('requires ADMIN and a reason, audits the cancellation and notifies the student', async () => {
+    const admin = await createAdmin()
+    const { agent: student } = await registerStudent('cancelled@example.test')
+    const slot = await createSlot(72)
+    const created = await book(student, slot.id)
+    const bookingId = created.body.booking.bookingId
+    const leadBefore = await pool.query("SELECT status, updated_at FROM leads WHERE email = 'cancelled@example.test'")
+
+    expect((await student.post(`/api/admin/bookings/${bookingId}/cancel`).send({ reason: 'Professor indisponível.' })).status).toBe(403)
+    expect((await admin.post(`/api/admin/bookings/${bookingId}/cancel`).send({ reason: '' })).status).toBe(422)
+
+    const cancelled = await admin.post(`/api/admin/bookings/${bookingId}/cancel`).send({ reason: 'Professor indisponível.' })
+    expect(cancelled.status).toBe(200)
+    expect(cancelled.body.cancellation).toEqual({ bookingId })
+
+    const stored = await pool.query(
+      `SELECT b.cancellation_reason, b.cancelled_by, b.cancelled_at, s.status
+       FROM lesson_bookings b JOIN lesson_slots s ON s.id = b.slot_id WHERE b.id = $1`,
+      [bookingId],
+    )
+    expect(stored.rows[0]).toMatchObject({ cancellation_reason: 'Professor indisponível.', status: 'BLOCKED' })
+    expect(stored.rows[0].cancelled_by).toBeTypeOf('number')
+    expect(stored.rows[0].cancelled_at).toBeTruthy()
+
+    const mine = await student.get('/api/bookings/me')
+    expect(mine.body.lessons[0]).toMatchObject({ status: 'CANCELLED', cancellation: { reason: 'Professor indisponível.' } })
+    const delivery = await pool.query(
+      "SELECT status, provider FROM notification_deliveries WHERE channel = 'EMAIL' AND event = 'ADMIN_CANCELLATION'",
+    )
+    expect(delivery.rows[0]).toEqual({ status: 'SENT', provider: 'resend' })
+
+    const schedule = await admin.get('/api/admin/schedule')
+    expect(schedule.body.slots[0].booking.cancellation).toMatchObject({ reason: 'Professor indisponível.', cancelledBy: 'Administrador' })
+    const release = await admin.patch(`/api/admin/schedule/${slot.id}`).send({ status: 'AVAILABLE' })
+    expect(release.status).toBe(409)
+    expect(release.body.error.code).toBe('CANCELLED_BOOKING_SLOT_LOCKED')
+    expect((await admin.post(`/api/admin/bookings/${bookingId}/cancel`).send({ reason: 'Segunda tentativa.' })).status).toBe(409)
+
+    const leadAfter = await pool.query("SELECT status, updated_at FROM leads WHERE email = 'cancelled@example.test'")
+    expect(leadAfter.rows[0]).toEqual(leadBefore.rows[0])
   })
 })
 
@@ -343,6 +509,85 @@ describe('admin schedule', () => {
   })
 })
 
+describe('regular lessons', () => {
+  it('allows only an ADMIN to assign REGULAR lessons to converted students without changing the lead', async () => {
+    const admin = await createAdmin()
+    const { agent: student, user } = await registerStudent('regular@example.test')
+    const startsAt = new Date(Date.now() + 120 * 60 * 60 * 1000).toISOString()
+    const payload = { studentId: user.id, startsAt, durationMinutes: 60, type: 'REGULAR', notes: 'Conversation class' }
+
+    expect((await student.post('/api/admin/lessons').send(payload)).status).toBe(403)
+    const beforeConversion = await admin.post('/api/admin/lessons').send(payload)
+    expect(beforeConversion.status).toBe(409)
+    expect(beforeConversion.body.error.code).toBe('STUDENT_NOT_CONVERTED')
+    expect((await admin.post('/api/admin/lessons').send({ ...payload, studentId: 999999 })).status).toBe(404)
+
+    const adminUser = await pool.query("SELECT id FROM users WHERE role = 'ADMIN'")
+    const invalidRole = await admin.post('/api/admin/lessons').send({ ...payload, studentId: adminUser.rows[0].id })
+    expect(invalidRole.status).toBe(422)
+    expect(invalidRole.body.error.code).toBe('USER_NOT_STUDENT')
+    expect((await admin.post('/api/admin/lessons').send({ ...payload, startsAt: new Date(Date.now() - 60_000).toISOString() })).status).toBe(422)
+    expect((await admin.post('/api/admin/lessons').send({ ...payload, durationMinutes: 90 })).status).toBe(422)
+
+    const trialSlot = await createSlot(72)
+    await book(student, trialSlot.id)
+    expect((await admin.patch(`/api/admin/schedule/${trialSlot.id}`).send({ status: 'COMPLETED' })).status).toBe(200)
+    const lead = await pool.query("SELECT id FROM leads WHERE email = 'regular@example.test'")
+    expect((await admin.patch(`/api/admin/leads/${lead.rows[0].id}/status`).send({ status: 'CONVERTED' })).status).toBe(200)
+
+    const convertedStudents = await admin.get('/api/admin/students/converted')
+    expect(convertedStudents.status).toBe(200)
+    expect(convertedStudents.body.students).toEqual([expect.objectContaining({ id: user.id, email: 'regular@example.test' })])
+    const leadBeforeRegular = await pool.query(
+      'SELECT status, scheduled_at, trial_completed_at, converted_at, updated_at FROM leads WHERE id = $1',
+      [lead.rows[0].id],
+    )
+
+    const created = await admin.post('/api/admin/lessons').send(payload)
+    expect(created.status).toBe(201)
+    expect(created.body.lesson).toMatchObject({ studentId: user.id, durationMinutes: 60, type: 'REGULAR', status: 'BOOKED' })
+    const lessonId = created.body.lesson.id
+
+    const conflict = await admin.post('/api/admin/lessons').send(payload)
+    expect(conflict.status).toBe(409)
+    expect(conflict.body.error.code).toBe('LESSON_TIME_CONFLICT')
+
+    const mine = await student.get('/api/bookings/me')
+    expect(mine.status).toBe(200)
+    expect(mine.body.lessons).toEqual(expect.arrayContaining([
+      expect.objectContaining({ slotId: lessonId, type: 'REGULAR', status: 'BOOKED' }),
+    ]))
+    const regularBooking = mine.body.lessons.find((lesson: { slotId: number }) => lesson.slotId === lessonId)
+    expect((await student.delete(`/api/bookings/${regularBooking.bookingId}`)).body.error.code).toBe('REGULAR_LESSON_MANAGED_BY_ADMIN')
+    expect((await student.patch(`/api/bookings/${regularBooking.bookingId}/reschedule`).send({ newSlotId: trialSlot.id })).body.error.code).toBe('REGULAR_LESSON_MANAGED_BY_ADMIN')
+
+    const schedule = await admin.get('/api/admin/schedule')
+    expect(schedule.body.slots).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        id: lessonId,
+        type: 'REGULAR',
+        booking: expect.objectContaining({ student: expect.objectContaining({ email: 'regular@example.test' }) }),
+      }),
+    ]))
+
+    expect((await admin.patch(`/api/admin/schedule/${lessonId}`).send({ status: 'COMPLETED' })).status).toBe(200)
+    const history = await student.get('/api/bookings/me')
+    expect(history.body.lessons).toEqual(expect.arrayContaining([
+      expect.objectContaining({ slotId: lessonId, type: 'REGULAR', status: 'COMPLETED' }),
+    ]))
+
+    const leadAfterRegular = await pool.query(
+      'SELECT status, scheduled_at, trial_completed_at, converted_at, updated_at FROM leads WHERE id = $1',
+      [lead.rows[0].id],
+    )
+    expect(leadAfterRegular.rows[0]).toEqual(leadBeforeRegular.rows[0])
+    expect((await pool.query("SELECT count(*)::int AS count FROM analytics_events WHERE event_name = 'trial_completed'")).rows[0].count).toBe(1)
+
+    const metrics = await admin.get('/api/admin/leads/metrics?days=30')
+    expect(metrics.body.metrics).toMatchObject({ bookings: 1, trials: 1 })
+  })
+})
+
 describe('leads and attribution', () => {
   it('creates, validates and merges a public lead while preserving first-touch source and UTM', async () => {
     const first = await request(app).post('/api/leads').send({
@@ -420,6 +665,32 @@ describe('analytics and admin metrics', () => {
     expect((await request(app).post('/api/analytics/events').send({ eventName: 'registration_completed', sessionId: 'analytics-session-01' })).status).toBe(422)
     expect((await request(app).post('/api/analytics/events').send({ eventName: 'cta_clicked', sessionId: 'analytics-session-01', metadata: { email: 'private@example.test' } })).status).toBe(422)
     expect((await pool.query('SELECT count(*)::int AS count FROM analytics_events')).rows[0].count).toBe(1)
+  })
+
+  it('keeps sensitive values out of operational logs and notification audit columns', async () => {
+    const secretValue = 'private-person@example.test bearer-sensitive-token'
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    const previousNodeEnvironment = process.env.NODE_ENV
+    process.env.NODE_ENV = 'production'
+    const response = {
+      status: vi.fn(),
+      json: vi.fn(),
+    }
+    response.status.mockReturnValue(response)
+    try {
+      errorHandler(new Error(secretValue), {} as never, response as never, (() => undefined) as never)
+      expect(response.status).toHaveBeenCalledWith(500)
+      expect(JSON.stringify(consoleError.mock.calls)).not.toContain(secretValue)
+    } finally {
+      process.env.NODE_ENV = previousNodeEnvironment
+      consoleError.mockRestore()
+    }
+
+    const columns = await pool.query<{ column_name: string }>(
+      `SELECT column_name FROM information_schema.columns
+       WHERE table_schema = 'public' AND table_name = 'notification_deliveries'`,
+    )
+    expect(columns.rows.map((row) => row.column_name)).not.toEqual(expect.arrayContaining(['email', 'phone', 'token', 'password']))
   })
 
   it('returns filtered leads and transaction-backed metrics/funnel for a controlled cohort', async () => {

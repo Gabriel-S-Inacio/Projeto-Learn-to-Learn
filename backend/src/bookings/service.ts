@@ -3,6 +3,7 @@ import { pool } from '../db/client.js'
 import { AppError } from '../http/errors.js'
 import { ensureLeadForUser } from '../leads/service.js'
 import { recordAnalyticsEvent } from '../analytics/service.js'
+import { notificationService } from '../notifications/service.js'
 
 async function transaction<T>(operation: (client: PoolClient) => Promise<T>) {
   const client = await pool.connect()
@@ -20,11 +21,11 @@ async function transaction<T>(operation: (client: PoolClient) => Promise<T>) {
 }
 
 export async function createBooking(studentId: number, slotId: number, sessionId?: string) {
-  return transaction(async (client) => {
+  const result = await transaction(async (client) => {
     const slotResult = await client.query<{ id: number }>(
       `UPDATE lesson_slots
        SET status = 'BOOKED', updated_at = now()
-       WHERE id = $1 AND status = 'AVAILABLE' AND starts_at > now()
+       WHERE id = $1 AND status = 'AVAILABLE' AND type = 'TRIAL' AND starts_at > now()
        RETURNING id`,
       [slotId],
     )
@@ -48,6 +49,8 @@ export async function createBooking(studentId: number, slotId: number, sessionId
     })
     return { bookingId: booking.rows[0]!.id, slotId }
   })
+  await notificationService.sendBookingConfirmation(result.bookingId)
+  return result
 }
 
 export function isAtLeast24HoursAway(startsAt: Date, now = new Date()) {
@@ -62,8 +65,9 @@ export async function cancelBooking(studentId: number, bookingId: number, now = 
       slot_id: number
       starts_at: Date
       status: string
+      type: string
     }>(
-      `SELECT b.id, b.student_id, b.slot_id, s.starts_at, s.status
+      `SELECT b.id, b.student_id, b.slot_id, s.starts_at, s.status, s.type
        FROM lesson_bookings b
        JOIN lesson_slots s ON s.id = b.slot_id
        WHERE b.id = $1
@@ -74,6 +78,7 @@ export async function cancelBooking(studentId: number, bookingId: number, now = 
     if (!booking) throw new AppError(404, 'BOOKING_NOT_FOUND', 'Reserva não encontrada.')
     if (booking.student_id !== studentId) throw new AppError(403, 'FORBIDDEN', 'Esta reserva pertence a outro aluno.')
     if (booking.status !== 'BOOKED') throw new AppError(409, 'BOOKING_NOT_ACTIVE', 'Esta reserva não pode mais ser cancelada.')
+    if (booking.type !== 'TRIAL') throw new AppError(409, 'REGULAR_LESSON_MANAGED_BY_ADMIN', 'Aulas regulares são gerenciadas pela administração.')
     if (!isAtLeast24HoursAway(booking.starts_at, now)) {
       throw new AppError(409, 'CANCELLATION_WINDOW_CLOSED', 'Cancelamentos são permitidos até 24 horas antes da aula.')
     }
@@ -95,8 +100,9 @@ export async function rescheduleBooking(studentId: number, bookingId: number, ne
       slot_id: number
       starts_at: Date
       status: string
+      type: string
     }>(
-      `SELECT b.id, b.student_id, b.slot_id, s.starts_at, s.status
+      `SELECT b.id, b.student_id, b.slot_id, s.starts_at, s.status, s.type
        FROM lesson_bookings b
        JOIN lesson_slots s ON s.id = b.slot_id
        WHERE b.id = $1
@@ -107,6 +113,7 @@ export async function rescheduleBooking(studentId: number, bookingId: number, ne
     if (!booking) throw new AppError(404, 'BOOKING_NOT_FOUND', 'Reserva não encontrada.')
     if (booking.student_id !== studentId) throw new AppError(403, 'FORBIDDEN', 'Esta reserva pertence a outro aluno.')
     if (booking.status !== 'BOOKED') throw new AppError(409, 'BOOKING_NOT_ACTIVE', 'Esta reserva não pode mais ser remarcada.')
+    if (booking.type !== 'TRIAL') throw new AppError(409, 'REGULAR_LESSON_MANAGED_BY_ADMIN', 'Aulas regulares são gerenciadas pela administração.')
     if (!isAtLeast24HoursAway(booking.starts_at, now)) {
       throw new AppError(409, 'RESCHEDULE_WINDOW_CLOSED', 'Remarcações são permitidas até 24 horas antes da aula.')
     }
@@ -115,7 +122,7 @@ export async function rescheduleBooking(studentId: number, bookingId: number, ne
     const newSlot = await client.query<{ id: number }>(
       `UPDATE lesson_slots
        SET status = 'BOOKED', updated_at = now()
-       WHERE id = $1 AND status = 'AVAILABLE' AND starts_at > now()
+       WHERE id = $1 AND status = 'AVAILABLE' AND type = 'TRIAL' AND starts_at > now()
        RETURNING id`,
       [newSlotId],
     )

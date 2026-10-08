@@ -43,7 +43,10 @@ export const errorHandler: ErrorRequestHandler = (error, _request, response, _ne
     return
   }
 
-  if (process.env.NODE_ENV !== 'test') console.error('Unhandled request error', error)
+  if (process.env.NODE_ENV !== 'test') {
+    const safeCode = postgresCode || (error instanceof Error ? error.name : 'UNKNOWN_ERROR')
+    console.error('Unhandled request error', { code: safeCode })
+  }
   response.status(500).json({ error: { code: 'INTERNAL_ERROR', message: 'Não foi possível concluir a operação.' } })
 }
 

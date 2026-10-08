@@ -5,6 +5,7 @@ import Eyebrow from '../../components/ui/Eyebrow'
 import { useAuth } from '../../context/AuthContext'
 import './AuthPage.css'
 import { trackEvent } from '../../services/analyticsService'
+import TurnstileWidget from '../../components/security/TurnstileWidget'
 
 function safeRedirect(value) {
   return value?.startsWith('/') && !value.startsWith('//') ? value : null
@@ -14,6 +15,8 @@ export default function Register() {
   const [form, setForm] = useState({ name: '', email: '', phone: '', password: '' })
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [turnstileToken, setTurnstileToken] = useState('')
+  const [challengeKey, setChallengeKey] = useState(0)
   const trackedStart = useRef(false)
   const { signUp } = useAuth()
   const location = useLocation()
@@ -35,12 +38,14 @@ export default function Register() {
     setError('')
     setSubmitting(true)
     try {
-      await signUp(form)
+      await signUp({ ...form, turnstileToken })
       const redirect = safeRedirect(params.get('redirect')) || '/minhas-aulas'
       const slotId = params.get('slotId')
       navigate(`${redirect}${slotId ? `?slotId=${encodeURIComponent(slotId)}` : ''}`, { replace: true })
     } catch (requestError) {
       setError(requestError.message)
+      setTurnstileToken('')
+      setChallengeKey((current) => current + 1)
     } finally {
       setSubmitting(false)
     }
@@ -64,8 +69,9 @@ export default function Register() {
             <div className="form-field"><label htmlFor="register-email">E-mail</label><input autoComplete="email" id="register-email" name="email" onChange={updateField} required type="email" value={form.email} /></div>
             <div className="form-field"><label htmlFor="register-phone">Telefone</label><input autoComplete="tel" id="register-phone" name="phone" onChange={updateField} required type="tel" value={form.phone} /></div>
             <div className="form-field"><label htmlFor="register-password">Senha</label><input autoComplete="new-password" id="register-password" minLength="8" name="password" onChange={updateField} required type="password" value={form.password} /></div>
+            <TurnstileWidget action="register" key={challengeKey} onError={() => setError('Não foi possível validar a proteção antibot.')} onVerify={setTurnstileToken} />
             {error && <p className="form-error" role="alert">{error}</p>}
-            <Button disabled={submitting} type="submit">{submitting ? 'Criando conta...' : 'Criar conta'}</Button>
+            <Button disabled={submitting || !turnstileToken} type="submit">{submitting ? 'Criando conta...' : 'Criar conta'}</Button>
           </form>
           <p className="auth-card__alternate">Já tem uma conta? <Link to={`/login${loginSearch.size ? `?${loginSearch}` : ''}`}>Entrar</Link></p>
         </section>

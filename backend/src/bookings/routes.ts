@@ -27,9 +27,13 @@ bookingsRouter.get('/me', asyncHandler(async (request, response) => {
     slot_id: number
     starts_at: Date
     duration_minutes: number
+    type: 'TRIAL' | 'REGULAR'
     status: string
+    cancellation_reason: string | null
+    cancelled_at: Date | null
   }>(
-    `SELECT b.id AS booking_id, s.id AS slot_id, s.starts_at, s.duration_minutes, s.status
+    `SELECT b.id AS booking_id, s.id AS slot_id, s.starts_at, s.duration_minutes, s.type, s.status,
+            b.cancellation_reason, b.cancelled_at
      FROM lesson_bookings b
      JOIN lesson_slots s ON s.id = b.slot_id
      WHERE b.student_id = $1
@@ -41,7 +45,12 @@ bookingsRouter.get('/me', asyncHandler(async (request, response) => {
     slotId: row.slot_id,
     startsAt: row.starts_at.toISOString(),
     durationMinutes: row.duration_minutes,
-    status: row.status,
+    type: row.type,
+    status: row.cancelled_at ? 'CANCELLED' : row.status,
+    cancellation: row.cancelled_at ? {
+      reason: row.cancellation_reason,
+      cancelledAt: row.cancelled_at.toISOString(),
+    } : null,
   })) })
 }))
 
