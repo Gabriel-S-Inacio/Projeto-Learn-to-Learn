@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import Eyebrow from '../../components/ui/Eyebrow'
 import Button from '../../components/ui/Button'
 import { useAuth } from '../../context/AuthContext'
+import TurnstileWidget from '../../components/security/TurnstileWidget'
 import './AuthPage.css'
 
 function safeRedirect(value) {
@@ -13,6 +14,8 @@ export default function Login() {
   const [form, setForm] = useState({ email: '', password: '' })
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [turnstileToken, setTurnstileToken] = useState('')
+  const [challengeKey, setChallengeKey] = useState(0)
   const { signIn } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
@@ -23,7 +26,7 @@ export default function Login() {
     setError('')
     setSubmitting(true)
     try {
-      const user = await signIn(form)
+      const user = await signIn({ ...form, turnstileToken })
       const redirect = safeRedirect(params.get('redirect'))
       const slotId = params.get('slotId')
       if (user.role === 'ADMIN') navigate('/admin/agenda', { replace: true })
@@ -31,6 +34,8 @@ export default function Login() {
       else navigate('/minhas-aulas', { replace: true })
     } catch (requestError) {
       setError(requestError.message)
+      setTurnstileToken('')
+      setChallengeKey((current) => current + 1)
     } finally {
       setSubmitting(false)
     }
@@ -52,8 +57,9 @@ export default function Login() {
           <form className="auth-form" onSubmit={handleSubmit}>
             <div className="form-field"><label htmlFor="login-email">E-mail</label><input autoComplete="email" id="login-email" name="email" onChange={(event) => setForm({ ...form, email: event.target.value })} required type="email" value={form.email} /></div>
             <div className="form-field"><label htmlFor="login-password">Senha</label><input autoComplete="current-password" id="login-password" minLength="8" name="password" onChange={(event) => setForm({ ...form, password: event.target.value })} required type="password" value={form.password} /></div>
+            <TurnstileWidget action="login" key={challengeKey} onError={() => setError('Não foi possível validar a proteção antibot.')} onVerify={setTurnstileToken} />
             {error && <p className="form-error" role="alert">{error}</p>}
-            <Button disabled={submitting} type="submit">{submitting ? 'Entrando...' : 'Entrar'}</Button>
+            <Button disabled={submitting || !turnstileToken} type="submit">{submitting ? 'Entrando...' : 'Entrar'}</Button>
           </form>
           <p className="auth-card__alternate">Ainda não tem uma conta? <Link to={`/cadastro${registerSearch.size ? `?${registerSearch}` : ''}`}>Cadastre-se</Link></p>
         </section>

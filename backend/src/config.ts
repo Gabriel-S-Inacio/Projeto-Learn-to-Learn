@@ -1,5 +1,11 @@
-import 'dotenv/config'
+import { config as loadEnvironment } from 'dotenv'
+import { fileURLToPath } from 'node:url'
 import { z } from 'zod'
+
+if (process.env.NODE_ENV !== 'production') {
+  const rootEnvironmentPath = fileURLToPath(new URL('../../.env', import.meta.url))
+  loadEnvironment({ path: rootEnvironmentPath, override: false, quiet: true })
+}
 
 const optionalEnvironmentValue = <T extends z.ZodTypeAny>(schema: T) =>
   z.preprocess(
@@ -17,6 +23,10 @@ const environmentSchema = z.object({
   ADMIN_NAME: optionalEnvironmentValue(z.string().min(1)),
   ADMIN_EMAIL: optionalEnvironmentValue(z.string().email()),
   ADMIN_PASSWORD: optionalEnvironmentValue(z.string().min(8)),
+  TURNSTILE_SECRET_KEY: optionalEnvironmentValue(z.string().min(20)),
+  RESEND_API_KEY: optionalEnvironmentValue(z.string().min(8)),
+  EMAIL_FROM: optionalEnvironmentValue(z.string().min(3).max(320)),
+  WHATSAPP_PROVIDER: z.enum(['disabled']).default('disabled'),
 })
 
 const environment = environmentSchema.parse(process.env)

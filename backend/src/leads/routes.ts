@@ -18,5 +18,5 @@ export const leadsRouter = Router()
 
 leadsRouter.post('/', asyncHandler(async (request, response) => {
   const lead = await createOrMergePublicLead(leadSchema.parse(request.body))
-  response.status(lead.created ? 201 : 200).json({ lead: { id: lead.id, status: lead.status, created: lead.created } })
+  response.status(lead.created ? 201 : 200).json({ lead: { status: lead.status, created: lead.created } })
 }))

@@ -1,153 +1,231 @@
 # Learn to Learn English
 
-Aplicação de agendamento de aulas experimentais com front-end React, API REST em Express e PostgreSQL. O visual público preserva a referência oficial do projeto, enquanto autenticação, área do aluno e agenda administrativa usam os mesmos tokens e componentes.
+MVP de uma plataforma de inglês que cobre a jornada do visitante ao aluno: captação de lead, cadastro, aula experimental, conversão comercial, aulas regulares e histórico. O projeto possui frontend público e autenticado, API REST, painel administrativo, persistência PostgreSQL, notificações e controles de segurança e privacidade.
 
 ## Stack
 
-- React 19, Vite e React Router
-- Node.js, Express e TypeScript
-- PostgreSQL e Drizzle ORM
-- Zod, bcrypt e sessões opacas em cookie `HttpOnly`
-- Vitest e Supertest
-- Docker Compose
+- React 19 e React Router
+- Vite
+- Express
+- TypeScript no backend
+- PostgreSQL
+- Drizzle ORM
+- Docker e Docker Compose
+- Zod, bcrypt, Vitest e Supertest
 
-## Configuração
+## Funcionalidades implementadas
 
-Copie `.env.example` para `.env` e troque os valores de segurança:
+- Cadastro e login com papéis `STUDENT` e `ADMIN`.
+- Proteção de cadastro e login com Cloudflare Turnstile e validação no backend.
+- Agenda pública de aulas experimentais.
+- Reserva, cancelamento e remarcação pelo aluno, com proteção transacional de horários.
+- Área “Minhas Aulas”, próximas aulas e histórico de aulas concluídas.
+- Aulas `TRIAL` e `REGULAR`; aulas regulares são atribuídas pelo ADMIN somente a alunos convertidos.
+- Agenda administrativa para criar horários, concluir aulas e visualizar alunos associados.
+- Captação e deduplicação de leads, atribuição UTM e funil comercial.
+- Analytics com eventos permitidos e metadados restritos.
+- Conversão manual de leads pelo ADMIN.
+- Cancelamento administrativo obrigatório com motivo, autor e data registrados.
+- Confirmações de agendamento e avisos de cancelamento administrativo por e-mail.
+- Abstração de WhatsApp, atualmente desabilitada enquanto não houver provedor configurado.
+- Auditoria de privacidade para endpoints, roles, logs, cookies, CORS, secrets, analytics e PII.
+
+## Estrutura do projeto
+
+```text
+/
+├── src/                    # Frontend React/Vite
+├── backend/
+│   ├── src/                # API Express/TypeScript
+│   ├── migrations/         # Migrations SQL incrementais
+│   └── tests/              # Testes de integração do backend
+├── docs/                   # Auditorias e decisões de implementação
+├── docker-compose.yml      # PostgreSQL, backend e profile de testes
+└── .env                    # Único arquivo local de ambiente, não versionado
+```
+
+## Configuração de ambiente
+
+O projeto utiliza um único `.env`, localizado na raiz. O backend carrega esse arquivo explicitamente mesmo quando é iniciado dentro de `/backend`. Não crie `backend/.env`.
+
+Crie o arquivo local a partir do exemplo:
 
 ```bash
 cp .env.example .env
 ```
 
-Variáveis principais:
+Variáveis utilizadas, sem valores reais:
 
-- `VITE_API_URL`: URL pública da API para o front-end.
-- `DATABASE_URL`: conexão PostgreSQL usada pela API, migrations e seed.
-- `AUTH_SECRET`: segredo de pelo menos 32 caracteres usado no hash das sessões.
+- `DATABASE_URL`: conexão PostgreSQL usada pelo backend, migrations e seed.
+- `AUTH_SECRET`: segredo usado para proteger os tokens de sessão; deve ter pelo menos 32 caracteres.
 - `FRONTEND_ORIGIN`: origem autorizada pelo CORS.
-- `SESSION_COOKIE_SECURE`: use `false` apenas em desenvolvimento HTTP e `true` em produção HTTPS.
-- `ADMIN_NAME`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`: conta administrativa criada pelo seed; não existe cadastro público de ADMIN.
+- `ADMIN_NAME`: nome da conta administrativa criada pelo seed.
+- `ADMIN_EMAIL`: e-mail da conta administrativa.
+- `ADMIN_PASSWORD`: senha da conta administrativa.
+- `TURNSTILE_SITE_KEY`: nome conceitual da site key do Turnstile. No frontend Vite, o nome efetivamente usado pelo projeto é `VITE_TURNSTILE_SITE_KEY`.
+- `TURNSTILE_SECRET_KEY`: secret key validada exclusivamente pelo backend.
+- `RESEND_API_KEY`: credencial do provider de e-mail Resend.
+- `EMAIL_FROM`: remetente autorizado no Resend.
 
-## Configurando o usuário administrador
+Também existem configurações auxiliares documentadas em `.env.example`, como `VITE_API_URL`, `PORT`, `SESSION_COOKIE_SECURE` e `WHATSAPP_PROVIDER`.
 
-Crie o arquivo local de ambiente a partir do exemplo:
+Nunca versione `.env`, senhas, tokens ou credenciais reais. Variáveis já fornecidas pelo ambiente ou pelo Docker não são sobrescritas pelo carregamento local.
 
-```bash
-cp .env.example .env
-```
+## Setup local
 
-Defina credenciais exclusivamente locais no `.env` (sem versioná-las):
+Requisitos: Node.js, npm e Docker Desktop/Docker Engine com Compose.
 
-```ini
-ADMIN_NAME=...
-ADMIN_EMAIL=...
-ADMIN_PASSWORD=...
-```
-
-Com o PostgreSQL disponível e as migrations aplicadas, execute o seed pelo backend:
+Instale as dependências do frontend e do backend:
 
 ```bash
+npm ci
+
 cd backend
-npm run db:seed:admin
+npm ci
+cd ..
 ```
 
-No fluxo com Docker, configure primeiro o `.env` da raiz e execute:
+### Opção 1 — backend e PostgreSQL via Docker
+
+O Compose sobe o PostgreSQL, aplica migrations, executa o seed inicial do ADMIN quando suas variáveis estão configuradas e inicia a API:
 
 ```bash
 docker compose up -d
-docker compose exec backend npm run db:seed:admin
 ```
 
-O comando é idempotente: cria o ADMIN quando o e-mail ainda não existe e, quando ele já pertence a um ADMIN, sincroniza explicitamente o nome e a senha com os valores do `.env`. Ele recusa um e-mail já pertencente a um STUDENT e nunca altera essa role. Já o seed automático da inicialização do container apenas cria a conta ausente; em ambientes de produção ele não sobrescreve silenciosamente credenciais administrativas existentes.
-
-Depois, acesse `http://localhost:5173/login`. STUDENT e ADMIN utilizam a mesma tela de login; a `role` da conta determina as áreas autorizadas. As páginas administrativas são:
-
-- `/admin/agenda`
-- `/admin/leads`
-
-Nenhum endpoint público cria contas ADMIN. O seed valida todas as variáveis obrigatórias e não registra senha nem hash no terminal.
-
-## Execução com Docker
-
-Suba PostgreSQL e API:
+Em outro terminal, inicie o frontend:
 
 ```bash
-docker compose up --build -d backend
-```
-
-A API fica em `http://localhost:3001/api` e aplica migrations e seed antes do servidor iniciar. O healthcheck está em `GET /api/health`.
-
-Execute a suíte isolada de integração:
-
-```bash
-docker compose --profile test up --build --abort-on-container-exit --exit-code-from backend-test backend-test
-```
-
-O profile de testes usa um PostgreSQL temporário próprio (`postgres-test`, com `tmpfs`) e nunca executa `TRUNCATE` no banco persistente de desenvolvimento.
-
-## Execução local
-
-Front-end:
-
-```bash
-npm install
 npm run dev
 ```
 
-Backend, com PostgreSQL disponível e `backend/.env` configurado:
+### Opção 2 — PostgreSQL no Docker e backend local
+
+Suba somente o banco para não disputar a porta 3001 com o backend local:
 
 ```bash
+docker compose up -d postgres
+
 cd backend
-npm install
 npm run db:migrate
 npm run db:seed:admin
 npm run dev
 ```
 
-Builds:
+Em outro terminal, na raiz:
 
 ```bash
-npm run build
-cd backend && npm run build
+npm run dev
 ```
 
-## Rotas do front-end
+Não execute simultaneamente o serviço `backend` do Compose e `npm run dev` dentro de `/backend`, pois ambos usam a porta 3001 por padrão.
 
-- `/`, `/metodo`, `/como-funciona`, `/conteudos`, `/sobre`
-- `/agendar`: agenda pública e reserva autenticada
-- `/cadastro` e `/login`
-- `/minhas-aulas`: cancelamento e remarcação do próprio aluno
-- `/admin/agenda`: criação e gestão de horários, protegida por role
-- `/admin/leads`: leads, filtros, funil e métricas de conversão, protegida por role ADMIN
-- `/404` e fallback
+## URLs locais
 
-## API
-
-- `POST /api/auth/register`, `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me`
-- `GET /api/schedule/available`
-- `POST /api/bookings`, `GET /api/bookings/me`
-- `DELETE /api/bookings/:id`, `PATCH /api/bookings/:id/reschedule`
-- `GET /api/admin/schedule`, `POST /api/admin/schedule`, `PATCH /api/admin/schedule/:id`
-- `POST /api/leads`
-- `POST /api/analytics/events`
-- `GET /api/admin/leads`, `GET /api/admin/leads/metrics`, `PATCH /api/admin/leads/:id/status`
-
-Reservas e remarcações usam transações e updates condicionais no PostgreSQL. Um slot aceita uma única reserva, e cancelamento/remarcação pelo aluno exige antecedência mínima de 24 horas.
+- Frontend: <http://localhost:5173>
+- Backend/API: <http://localhost:3001/api>
+- Healthcheck: <http://localhost:3001/api/health>
+- Login: <http://localhost:5173/login>
+- Admin Agenda: <http://localhost:5173/admin/agenda>
+- Admin Leads: <http://localhost:5173/admin/leads>
 
 ## Banco de dados
 
-A migration inicial cria:
+As migrations são incrementais e migrations antigas não devem ser editadas:
 
-- `users`
-- `auth_sessions`
-- `lesson_slots`
-- `lesson_bookings`
-- `leads`
-- `analytics_events`
-- `schema_migrations`
+- `0000_initial.sql`: usuários, sessões, slots, bookings, roles, estados, índices e restrições iniciais.
+- `0001_leads_analytics.sql`: leads, estados do funil, atribuição UTM e eventos de analytics.
+- `0002_lesson_types.sql`: tipos de aula `TRIAL` e `REGULAR`, mantendo compatibilidade com aulas existentes.
+- `0003_hardening_notifications.sql`: auditoria de cancelamento administrativo e entregas de notificações.
 
-Ela também define roles, estados da agenda, chaves estrangeiras, índices, unicidade de e-mail/horário/reserva e limites de duração.
+Para aplicar migrations manualmente:
 
-## Validação
+```bash
+cd backend
+npm run db:migrate
+```
 
-A suíte de integração cobre autenticação, autorização, agenda pública, privacidade, reserva concorrente, cancelamento, limite de 24 horas, remarcação atômica/concorrente, leads, atribuição, analytics, conversão manual, métricas e áreas administrativas. A auditoria de retomada está em [`docs/implementation-audit.md`](docs/implementation-audit.md), e as decisões do Ciclo 2 estão em [`docs/cycle-2-leads-analytics.md`](docs/cycle-2-leads-analytics.md).
+O backend executado pelo Docker aplica migrations automaticamente antes de iniciar.
+
+## Usuário ADMIN
+
+Não existe cadastro público de ADMIN. Configure `ADMIN_NAME`, `ADMIN_EMAIL` e `ADMIN_PASSWORD` no `.env` da raiz e execute:
+
+```bash
+cd backend
+npm run db:seed:admin
+```
+
+O seed é idempotente. Ele cria a conta quando ausente, sincroniza nome e senha quando o e-mail já pertence a um ADMIN e recusa promover silenciosamente uma conta `STUDENT`.
+
+Com o backend no Docker, o seed também pode ser executado explicitamente com:
+
+```bash
+docker compose exec backend npm run db:seed:admin
+```
+
+## Testes e validação
+
+Última validação do MVP:
+
+- Testes de integração do backend: **30/30 PASS**.
+- Build do backend: **PASS**.
+- Build do frontend: **PASS**.
+- `npm audit --omit=dev` no backend: **0 vulnerabilidades**.
+- Route smoke e `git diff --check`: **PASS**.
+
+Builds e auditoria local:
+
+```bash
+cd backend
+npm run build
+npm audit --omit=dev
+
+cd ..
+npm run build
+git diff --check
+```
+
+A suíte completa deve usar o banco temporário isolado do profile de testes:
+
+```bash
+docker compose --profile test up --build --abort-on-container-exit --exit-code-from backend-test backend-test
+```
+
+Esse profile usa `postgres-test` com `tmpfs` e não altera o volume persistente de desenvolvimento.
+
+Evite executar `npm test` com `DATABASE_URL` apontando para o banco de desenvolvimento, pois a suíte reinicializa suas tabelas entre os cenários.
+
+## Notificações
+
+O `NotificationService` coordena os canais sem fazer parte da transação que persiste a reserva ou o cancelamento:
+
+- Resend é o provider real de e-mail.
+- Reservas persistidas geram confirmação com data, horário, duração e tipo da aula.
+- Cancelamentos administrativos geram aviso com o motivo registrado.
+- Falhas de entrega não desfazem a operação principal e são auditadas sem armazenar PII no log de entrega.
+- O `WhatsAppProvider` existe como abstração, mas permanece `disabled` sem credenciais e sem simulação enganosa de envio.
+
+## Segurança e privacidade
+
+- Senhas protegidas com bcrypt; `password_hash` nunca é retornado pela API.
+- Sessões opacas armazenadas como hash e enviadas em cookie `HttpOnly`, `SameSite=Lax` e `Secure` em produção.
+- Turnstile validado no backend em cadastro e login.
+- Rate limit por IP independente para cadastro e login.
+- CORS limitado a `FRONTEND_ORIGIN`.
+- Endpoints administrativos protegidos por autenticação e role `ADMIN`.
+- Logs não registram senhas, tokens, cookies, headers de autorização ou PII da requisição.
+- Analytics usa eventos e metadados permitidos; e-mail, telefone, senha, token, cookie, authorization e secret são rejeitados.
+- Respostas públicas são minimizadas e dados de leads ficam restritos à área administrativa.
+
+## Limitações conhecidas
+
+- O envio real de e-mail depende de `RESEND_API_KEY` e `EMAIL_FROM` válidos.
+- WhatsApp depende da implementação e configuração de um provedor real.
+- O rate limit atual é in-memory e deve usar armazenamento compartilhado em uma implantação com múltiplas réplicas.
+
+## Documentação complementar
+
+- [Auditoria inicial de implementação](docs/implementation-audit.md)
+- [Ciclo 2 — leads, funil e analytics](docs/cycle-2-leads-analytics.md)
+- [Ciclo 4 — auditoria de privacidade](docs/cycle-4-privacy-audit.md)

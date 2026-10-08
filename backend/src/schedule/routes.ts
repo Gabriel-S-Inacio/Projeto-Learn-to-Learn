@@ -12,7 +12,7 @@ scheduleRouter.get('/available', asyncHandler(async (_request, response) => {
     status: 'AVAILABLE'
   }>(`SELECT id, starts_at, duration_minutes, status
       FROM lesson_slots
-      WHERE starts_at > now() AND status = 'AVAILABLE'
+      WHERE starts_at > now() AND status = 'AVAILABLE' AND type = 'TRIAL'
       ORDER BY starts_at ASC`)
 
   response.json({

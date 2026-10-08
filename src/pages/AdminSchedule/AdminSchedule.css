@@ -19,11 +19,13 @@
 .admin-feedback--success { color: var(--color-primary); background: var(--color-soft-green); }
 .admin-feedback--error { color: #8c3434; border: 1px solid #e7b8b8; background: #fff1f1; }
 .admin-layout { display: grid; gap: var(--space-7); margin-top: var(--space-8); align-items: start; }
+.admin-create-column { display: grid; gap: var(--space-5); }
 .admin-create, .admin-schedule { padding: var(--space-6); border: 1px solid var(--color-border); border-radius: var(--radius-card); background: var(--color-surface); box-shadow: var(--shadow-soft); }
 .admin-create h2, .admin-schedule h2 { color: var(--color-primary); font-family: var(--font-editorial); font-size: 2rem; font-weight: 400; }
 .admin-create > p, .admin-schedule__heading p { margin-top: var(--space-2); color: var(--color-muted-text); font-size: .82rem; line-height: 1.5; }
 .admin-create form { display: grid; gap: var(--space-4); margin-top: var(--space-6); }
 .admin-create .button { width: 100%; margin-top: var(--space-2); }
+.admin-create .form-field small { display: block; margin-top: var(--space-2); color: var(--color-muted-text); font-size: .75rem; line-height: 1.4; }
 .admin-schedule__heading { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); margin-bottom: var(--space-6); }
 .admin-schedule__heading .button { min-height: 40px; padding: 9px 15px; }
 .admin-schedule .state-panel { padding: var(--space-10) var(--space-5); }
@@ -34,12 +36,16 @@
 .admin-slot__time strong, .admin-slot__time span, .admin-slot__details strong, .admin-slot__details span { display: block; }
 .admin-slot__time strong, .admin-slot__details strong { color: var(--color-primary); }
 .admin-slot__time span, .admin-slot__details span { margin-top: var(--space-1); color: var(--color-muted-text); font-size: .8rem; line-height: 1.5; }
-.admin-status { width: max-content; padding: 6px 10px; border-radius: var(--radius-pill); font-size: .68rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; }
+.admin-slot__badges { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.admin-status, .admin-type { width: max-content; padding: 6px 10px; border-radius: var(--radius-pill); font-size: .68rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; }
+.admin-type--trial { color: var(--color-primary); background: var(--color-soft-green); }
+.admin-type--regular { color: #3f4f75; background: #e8edfa; }
 .admin-status--available { color: var(--color-primary); background: var(--color-soft-green); }
 .admin-status--booked { color: #765f00; background: #fff4b2; }
 .admin-status--blocked { color: #6b5353; background: #eee4e4; }
 .admin-status--completed { color: #4d5861; background: #e5eaed; }
-.admin-slot__actions { display: flex; justify-content: flex-start; }
+.admin-status--cancelled { color: #8c3434; background: #fff1f1; }
+.admin-slot__actions { display: flex; flex-wrap: wrap; justify-content: flex-start; gap: var(--space-2); }
 .admin-slot__actions .button { min-height: 38px; padding: 8px 14px; font-size: .75rem; }
 .admin-gate { display: grid; min-height: 100vh; place-items: center; padding: var(--space-5); background: var(--color-background); }
 .admin-gate > .state-panel { width: min(100%, 480px); }
@@ -64,6 +70,6 @@
   .admin-shell { padding-top: var(--space-14); }
   .admin-intro { grid-template-columns: 1fr 520px; align-items: end; }
   .admin-layout { grid-template-columns: 340px minmax(0, 1fr); }
-  .admin-create { position: sticky; top: var(--space-6); }
+  .admin-create-column { position: sticky; top: var(--space-6); }
   .admin-create, .admin-schedule { padding: var(--space-7); }
 }

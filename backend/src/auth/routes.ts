@@ -7,6 +7,8 @@ import { users } from '../db/schema.js'
 import { AppError, asyncHandler } from '../http/errors.js'
 import { recordAnalyticsEvent } from '../analytics/service.js'
 import { ensureLeadForUser } from '../leads/service.js'
+import { createRateLimit } from '../security/rateLimit.js'
+import { verifyTurnstile } from '../security/turnstile.js'
 import { authenticate } from './middleware.js'
 import { clearSessionCookie, createSession, deleteSession, SESSION_COOKIE, setSessionCookie } from './session.js'
 
@@ -19,11 +21,27 @@ const registerSchema = z.object({
   utmMedium: z.string().trim().max(200).optional(),
   utmCampaign: z.string().trim().max(200).optional(),
   sessionId: z.string().trim().min(8).max(128).regex(/^[a-zA-Z0-9_-]+$/).optional(),
+  turnstileToken: z.string().trim().max(2048).optional(),
 })
 
 const loginSchema = z.object({
   email: z.string().trim().toLowerCase().email('Informe um e-mail válido.'),
   password: z.string().min(1, 'Informe sua senha.').max(128),
+  turnstileToken: z.string().trim().max(2048).optional(),
+})
+
+const registerRateLimit = createRateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 3,
+  code: 'REGISTER_RATE_LIMITED',
+  message: 'Muitas tentativas de cadastro. Aguarde antes de tentar novamente.',
+})
+
+const loginRateLimit = createRateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  code: 'LOGIN_RATE_LIMITED',
+  message: 'Muitas tentativas de login. Aguarde antes de tentar novamente.',
 })
 
 function publicUser(user: { id: number; name: string; email: string; phone: string | null; role: 'STUDENT' | 'ADMIN' }) {
@@ -32,8 +50,9 @@ function publicUser(user: { id: number; name: string; email: string; phone: stri
 
 export const authRouter = Router()
 
-authRouter.post('/register', asyncHandler(async (request, response) => {
+authRouter.post('/register', registerRateLimit, asyncHandler(async (request, response) => {
   const input = registerSchema.parse(request.body)
+  await verifyTurnstile(input.turnstileToken, request.ip, 'register')
   const [existing] = await db.select({ id: users.id }).from(users).where(sql`lower(${users.email}) = ${input.email}`).limit(1)
   if (existing) throw new AppError(409, 'EMAIL_IN_USE', 'Já existe uma conta com este e-mail.')
 
@@ -73,8 +92,9 @@ authRouter.post('/register', asyncHandler(async (request, response) => {
   response.status(201).json({ user: publicUser(user) })
 }))
 
-authRouter.post('/login', asyncHandler(async (request, response) => {
+authRouter.post('/login', loginRateLimit, asyncHandler(async (request, response) => {
   const input = loginSchema.parse(request.body)
+  await verifyTurnstile(input.turnstileToken, request.ip, 'login')
   const [user] = await db.select().from(users).where(sql`lower(${users.email}) = ${input.email}`).limit(1)
   if (!user || !(await bcrypt.compare(input.password, user.passwordHash))) {
     throw new AppError(401, 'INVALID_CREDENTIALS', 'E-mail ou senha incorretos.')

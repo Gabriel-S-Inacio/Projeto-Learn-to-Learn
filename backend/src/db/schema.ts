@@ -2,6 +2,8 @@ import { bigint, index, integer, jsonb, pgEnum, pgTable, serial, text, timestamp
 
 export const userRole = pgEnum('user_role', ['STUDENT', 'ADMIN'])
 export const lessonSlotStatus = pgEnum('lesson_slot_status', ['AVAILABLE', 'BOOKED', 'BLOCKED', 'COMPLETED'])
+export const lessonType = pgEnum('lesson_type', ['TRIAL', 'REGULAR'])
+export const notificationDeliveryStatus = pgEnum('notification_delivery_status', ['SENT', 'FAILED', 'SKIPPED'])
 export const leadStatus = pgEnum('lead_status', ['NEW', 'INTERESTED', 'SCHEDULED', 'TRIAL_COMPLETED', 'CONVERTED', 'LOST'])
 export const leadSource = pgEnum('lead_source', ['FORM', 'REGISTER', 'SCHEDULE', 'MANUAL'])
 
@@ -28,6 +30,7 @@ export const lessonSlots = pgTable('lesson_slots', {
   id: serial('id').primaryKey(),
   startsAt: timestamp('starts_at', { withTimezone: true }).notNull(),
   durationMinutes: integer('duration_minutes').notNull().default(60),
+  type: lessonType('type').notNull().default('TRIAL'),
   status: lessonSlotStatus('status').notNull().default('AVAILABLE'),
   notes: text('notes'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -38,9 +41,28 @@ export const lessonBookings = pgTable('lesson_bookings', {
   id: serial('id').primaryKey(),
   slotId: integer('slot_id').notNull().references(() => lessonSlots.id, { onDelete: 'restrict' }),
   studentId: integer('student_id').notNull().references(() => users.id, { onDelete: 'restrict' }),
+  cancellationReason: text('cancellation_reason'),
+  cancelledBy: integer('cancelled_by').references(() => users.id, { onDelete: 'restrict' }),
+  cancelledAt: timestamp('cancelled_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [unique('lesson_bookings_slot_unique').on(table.slotId), index('lesson_bookings_student_id_idx').on(table.studentId)])
+
+export const notificationDeliveries = pgTable('notification_deliveries', {
+  id: bigint('id', { mode: 'number' }).primaryKey().generatedAlwaysAsIdentity(),
+  bookingId: integer('booking_id').references(() => lessonBookings.id, { onDelete: 'set null' }),
+  userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'restrict' }),
+  channel: varchar('channel', { length: 20 }).notNull(),
+  event: varchar('event', { length: 64 }).notNull(),
+  status: notificationDeliveryStatus('status').notNull(),
+  provider: varchar('provider', { length: 64 }).notNull(),
+  failureCode: varchar('failure_code', { length: 64 }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  index('notification_deliveries_booking_id_idx').on(table.bookingId),
+  index('notification_deliveries_user_id_idx').on(table.userId),
+  index('notification_deliveries_created_at_idx').on(table.createdAt),
+])
 
 export const leads = pgTable('leads', {
   id: serial('id').primaryKey(),
@@ -88,5 +110,6 @@ export const analyticsEvents = pgTable('analytics_events', {
 
 export type UserRole = (typeof userRole.enumValues)[number]
 export type SlotStatus = (typeof lessonSlotStatus.enumValues)[number]
+export type LessonType = (typeof lessonType.enumValues)[number]
 export type LeadStatus = (typeof leadStatus.enumValues)[number]
 export type LeadSource = (typeof leadSource.enumValues)[number]

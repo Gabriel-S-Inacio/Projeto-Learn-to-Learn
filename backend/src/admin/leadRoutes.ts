@@ -37,8 +37,9 @@ adminLeadRouter.get('/metrics', asyncHandler(async (request, response) => {
      )
      SELECT
        (SELECT count(*)::int FROM cohort) AS leads,
-       (SELECT count(*)::int FROM lesson_bookings WHERE created_at >= $1 AND created_at < $2) AS bookings,
-       (SELECT count(*)::int FROM lesson_slots WHERE status = 'COMPLETED' AND updated_at >= $1 AND updated_at < $2) AS trials,
+       (SELECT count(*)::int FROM lesson_bookings b JOIN lesson_slots s ON s.id = b.slot_id
+         WHERE s.type = 'TRIAL' AND b.created_at >= $1 AND b.created_at < $2) AS bookings,
+       (SELECT count(*)::int FROM lesson_slots WHERE type = 'TRIAL' AND status = 'COMPLETED' AND updated_at >= $1 AND updated_at < $2) AS trials,
        (SELECT count(*)::int FROM leads WHERE converted_at >= $1 AND converted_at < $2) AS conversions,
        (SELECT count(*)::int FROM cohort WHERE scheduled_at IS NOT NULL) AS funnel_scheduled,
        (SELECT count(*)::int FROM cohort WHERE trial_completed_at IS NOT NULL) AS funnel_trials,

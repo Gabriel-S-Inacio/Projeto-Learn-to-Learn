@@ -10,6 +10,16 @@ import { getAvailableSlots } from '../../services/scheduleService'
 import { canChangeBooking, formatScheduleDate, formatShortDate, formatTime } from '../../utils/dateTime'
 import './MyLessons.css'
 
+const typeLabels = {
+  TRIAL: 'Aula experimental',
+  REGULAR: 'Aula regular',
+}
+
+const statusLabels = {
+  BOOKED: 'Confirmada',
+  COMPLETED: 'Concluída',
+}
+
 export default function MyLessons() {
   const { status: authStatus, user } = useAuth()
   const [lessons, setLessons] = useState({ data: [], status: 'loading', error: null })
@@ -69,6 +79,7 @@ export default function MyLessons() {
   }
 
   const upcoming = lessons.data.filter((lesson) => lesson.status === 'BOOKED' && new Date(lesson.startsAt) > new Date())
+  const history = lessons.data.filter((lesson) => lesson.status === 'COMPLETED')
 
   return (
     <main className="site-main lessons-page">
@@ -84,7 +95,7 @@ export default function MyLessons() {
         {authStatus === 'authenticated' && user.role === 'ADMIN' && <StatePanel title="Esta é uma conta administrativa." tone="muted"><Button to="/admin/agenda">Abrir agenda administrativa</Button></StatePanel>}
         {authStatus === 'authenticated' && user.role === 'STUDENT' && lessons.status === 'loading' && <StatePanel title="Carregando suas aulas..."><span className="schedule-spinner" /></StatePanel>}
         {authStatus === 'authenticated' && user.role === 'STUDENT' && lessons.status === 'error' && <StatePanel title="Não foi possível carregar suas aulas." tone="error"><p>{lessons.error?.message}</p><Button onClick={() => void loadLessons()} type="button">Tentar novamente</Button></StatePanel>}
-        {authStatus === 'authenticated' && user.role === 'STUDENT' && lessons.status !== 'loading' && !upcoming.length && <StatePanel icon={Clock} title="Nenhuma próxima aula." tone="dashed"><p>Escolha um horário disponível para começar sua jornada.</p><Button to="/agendar">Ver agenda</Button></StatePanel>}
+        {authStatus === 'authenticated' && user.role === 'STUDENT' && lessons.status !== 'loading' && lessons.status !== 'error' && !upcoming.length && <StatePanel icon={Clock} title="Nenhuma próxima aula." tone="dashed"><p>Escolha um horário disponível para começar sua jornada.</p><Button to="/agendar">Ver agenda</Button></StatePanel>}
         {authStatus === 'authenticated' && user.role === 'STUDENT' && upcoming.length > 0 && (
           <div className="lessons-list">
             <h2>Próximas aulas</h2>
@@ -93,15 +104,29 @@ export default function MyLessons() {
               return (
                 <article className="lesson-card" key={lesson.bookingId}>
                   <div className="lesson-card__date"><span>{formatShortDate(lesson.startsAt)}</span><strong>{formatTime(lesson.startsAt)}</strong></div>
-                  <div className="lesson-card__meta"><span>Aula experimental</span><small>{lesson.durationMinutes} minutos · Confirmada</small></div>
-                  <div className="lesson-card__actions">
-                    <Button disabled={!canChange || busy} onClick={() => void openReschedule(lesson)} type="button" variant="outline">Remarcar</Button>
-                    <Button disabled={!canChange || busy} onClick={() => setDialog({ type: 'cancel', lesson })} type="button" variant="danger">Cancelar</Button>
-                  </div>
-                  {!canChange && <p className="lesson-card__rule">Alterações encerradas: faltam menos de 24 horas.</p>}
+                  <div className="lesson-card__meta"><span>{typeLabels[lesson.type || 'TRIAL']}</span><small>{lesson.durationMinutes} minutos · {statusLabels[lesson.status]}</small></div>
+                  {lesson.type !== 'REGULAR' && (
+                    <div className="lesson-card__actions">
+                      <Button disabled={!canChange || busy} onClick={() => void openReschedule(lesson)} type="button" variant="outline">Remarcar</Button>
+                      <Button disabled={!canChange || busy} onClick={() => setDialog({ type: 'cancel', lesson })} type="button" variant="danger">Cancelar</Button>
+                    </div>
+                  )}
+                  {lesson.type !== 'REGULAR' && !canChange && <p className="lesson-card__rule">Alterações encerradas: faltam menos de 24 horas.</p>}
                 </article>
               )
             })}
+          </div>
+        )}
+        {authStatus === 'authenticated' && user.role === 'STUDENT' && lessons.status !== 'loading' && lessons.status !== 'error' && (
+          <div className="lessons-list lessons-history">
+            <h2>Histórico de aulas</h2>
+            {!history.length && <StatePanel title="Nenhuma aula concluída ainda." tone="dashed" />}
+            {history.map((lesson) => (
+              <article className="lesson-card lesson-card--history" key={lesson.bookingId}>
+                <div className="lesson-card__date"><span>{formatShortDate(lesson.startsAt)}</span><strong>{formatTime(lesson.startsAt)}</strong></div>
+                <div className="lesson-card__meta"><span>{typeLabels[lesson.type || 'TRIAL']}</span><small>{lesson.durationMinutes} minutos · {statusLabels[lesson.status]}</small></div>
+              </article>
+            ))}
           </div>
         )}
       </section>
