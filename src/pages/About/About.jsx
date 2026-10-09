@@ -1,4 +1,6 @@
 import { ArrowRight, Heart, Lightbulb, Quote } from '../../assets/icons/Icons'
+import mascotAbout from '../../assets/images/Pensando em Accent, Grammar e Fluency.png'
+import professorAbout from '../../assets/images/professor-sobre-cutout.png'
 import PageHero from '../../components/shared/PageHero'
 import Button from '../../components/ui/Button'
 import EditorialHeading from '../../components/ui/EditorialHeading'
@@ -9,7 +11,17 @@ export default function About() {
   return (
     <main className="site-main">
       <PageHero
-        aside={<p className="about-hero__aside">O Learn to Learn English nasceu da vontade de transformar a experiência de quem já estudou muito, mas ainda não se sente capaz de usar o idioma no mundo real.</p>}
+        aside={(
+          <div className="about-hero__visual">
+            <img
+              alt="Mascote pensando em accent, grammar e fluency"
+              className="about-hero__mascot"
+              src={mascotAbout}
+            />
+            <p className="about-hero__aside">O Learn to Learn English nasceu da vontade de transformar a experiência de quem já estudou muito, mas ainda não se sente capaz de usar o idioma no mundo real.</p>
+          </div>
+        )}
+        className="about-hero"
         eyebrow="Sobre"
         title={<>Ensinar inglês é, antes de tudo, ajudar alguém a <span className="text-marker">continuar aprendendo.</span></>}
       />
@@ -23,10 +35,10 @@ export default function About() {
       </section>
 
       <section className="teacher-section container">
-        <div className="teacher-portrait" aria-label="Representação gráfica do professor Douglas" role="img">
-          <span className="teacher-portrait__shape" />
+        <div className="teacher-portrait">
+          <span aria-hidden="true" className="teacher-portrait__backdrop" />
+          <img alt="Professor Douglas de blazer e braços cruzados" className="teacher-portrait__image" src={professorAbout} />
           <div className="teacher-portrait__label"><small>Professor</small><strong>Douglas</strong></div>
-          <span className="teacher-portrait__initial">D</span>
         </div>
         <div className="teacher-section__copy">
           <Eyebrow>Douglas, The Teacher</Eyebrow>

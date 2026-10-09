@@ -40,21 +40,23 @@
 
 .home-visual {
   position: relative;
-  min-height: 420px;
+  min-height: 450px;
+  isolation: isolate;
 }
 
 .home-visual__backdrop {
   position: absolute;
-  inset: 16px 0 16px 20px;
-  border-radius: 48px;
-  background: var(--color-primary);
+  inset: 12% 0 8% 16%;
+  z-index: -1;
+  border-radius: 48% 48% 32px 32px;
+  background: linear-gradient(145deg, var(--color-primary-hover), var(--color-primary));
 }
 
 .home-visual__sun {
   position: absolute;
   top: 0;
-  right: -16px;
-  z-index: 2;
+  right: 0;
+  z-index: 3;
   width: 80px;
   height: 80px;
   border-radius: 50%;
@@ -63,14 +65,14 @@
 
 .home-visual__image {
   position: absolute;
-  top: 32px;
-  right: 8%;
-  left: 0;
-  width: 92%;
-  height: 390px;
-  border-radius: var(--radius-hero);
-  box-shadow: var(--shadow-hero);
-  object-fit: cover;
+  inset: 0;
+  z-index: 2;
+  display: block;
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 24px 32px rgba(31, 77, 58, .18));
+  object-fit: contain;
+  object-position: center bottom;
 }
 
 .progress-card {
@@ -130,6 +132,7 @@
   position: absolute;
   right: 12px;
   bottom: 40px;
+  z-index: 1;
   width: 112px;
   height: 96px;
 }
@@ -268,8 +271,7 @@
 @media (min-width: 640px) {
   .home-hero__title { font-size: 4.5rem; }
   .home-hero__actions { flex-direction: row; }
-  .home-visual { min-height: 500px; }
-  .home-visual__image { height: 460px; }
+  .home-visual { min-height: 520px; }
   .home-contents__heading { flex-direction: row; align-items: flex-end; }
 }
 
@@ -286,6 +288,7 @@
   }
 
   .home-hero__title { font-size: 5.35rem; }
+  .home-visual { min-height: 560px; }
 
   .benefits-band {
     display: grid;

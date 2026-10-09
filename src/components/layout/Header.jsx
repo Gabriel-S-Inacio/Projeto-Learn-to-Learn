@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, NavLink, useLocation } from 'react-router-dom'
 import { ArrowUpRight, Close, Menu } from '../../assets/icons/Icons'
+import logo from '../../assets/images/logo-learn-to-learn.png'
 import { publicNavigation } from '../../data/navigation'
 import Button from '../ui/Button'
 import { useAuth } from '../../context/AuthContext'
@@ -20,7 +21,9 @@ export default function Header() {
   return (
     <header className="site-header">
       <div className="site-header__inner">
-        <Link className="site-logo" to="/">Learn to Learn</Link>
+        <Link aria-label="Learn to Learn — início" className="site-logo" to="/">
+          <img alt="Learn to Learn" className="site-logo__image" src={logo} />
+        </Link>
 
         <nav aria-label="Navegação principal" className="desktop-nav">
           {publicNavigation.map((item) => (

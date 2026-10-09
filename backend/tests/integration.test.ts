@@ -316,6 +316,22 @@ describe('password recovery', () => {
 })
 
 describe('account profile and password', () => {
+  it('mounts both account routes behind authentication and preserves the global 404', async () => {
+    const anonymousProfile = await request(app).patch('/api/account/profile').send({ email: 'anonymous@example.test' })
+    const anonymousPassword = await request(app).patch('/api/account/password').send({
+      currentPassword: 'current-password',
+      newPassword: 'new-password-123',
+    })
+    const missing = await request(app).get('/api/definitely-missing')
+
+    expect(anonymousProfile.status).toBe(401)
+    expect(anonymousProfile.body.error.code).toBe('UNAUTHORIZED')
+    expect(anonymousPassword.status).toBe(401)
+    expect(anonymousPassword.body.error.code).toBe('UNAUTHORIZED')
+    expect(missing.status).toBe(404)
+    expect(missing.body.error.code).toBe('NOT_FOUND')
+  })
+
   it('lets a STUDENT update their email and phone while preserving the lead association', async () => {
     const { agent, user } = await registerStudent('profile@example.test')
     const leadBefore = await pool.query('SELECT id FROM leads WHERE converted_user_id = $1', [user.id])

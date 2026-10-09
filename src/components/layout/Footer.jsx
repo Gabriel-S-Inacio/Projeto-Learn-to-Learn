@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { Asterisk, Instagram, Play } from '../../assets/icons/Icons'
+import { Instagram, TikTok } from '../../assets/icons/Icons'
 import { publicNavigation, resourceNavigation } from '../../data/navigation'
 import './layout.css'
 
@@ -22,9 +22,22 @@ export default function Footer() {
           <p className="site-footer__brand">Learn to Learn</p>
           <p className="site-footer__description">Aprender inglês é transformar a forma como você interage com o mundo.</p>
           <div aria-label="Redes sociais" className="site-footer__socials">
-            <span title="Instagram"><Instagram size={18} /></span>
-            <span title="Vídeos"><Play size={18} /></span>
-            <span title="Learn to Learn"><Asterisk size={18} /></span>
+            <a
+              aria-label="Instagram"
+              href="https://www.instagram.com/dougtheteacher/"
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              <Instagram size={18} />
+            </a>
+            <a
+              aria-label="TikTok"
+              href="https://www.tiktok.com/@dougtheteacher"
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              <TikTok size={18} />
+            </a>
           </div>
         </div>
         <FooterLinks links={publicNavigation} title="Navegação" />

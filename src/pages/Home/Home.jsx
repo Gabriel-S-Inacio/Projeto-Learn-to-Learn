@@ -1,5 +1,5 @@
 import { ArrowRight, ArrowUpRight } from '../../assets/icons/Icons'
-import heroStudy from '../../assets/images/hero-study.jpg'
+import professorHome from '../../assets/images/professor-home-cutout.png'
 import ContentCard from '../../components/shared/ContentCard'
 import CtaBanner from '../../components/shared/CtaBanner'
 import MethodCard from '../../components/shared/MethodCard'
@@ -32,7 +32,7 @@ export default function Home() {
         <div className="home-visual soft-reveal-delay">
           <div className="home-visual__backdrop" />
           <span className="home-visual__sun" />
-          <img alt="Pessoa estudando com caderno em uma mesa" className="home-visual__image" src={heroStudy} />
+          <img alt="Professor Douglas apontando para a frente" className="home-visual__image" src={professorHome} />
           <div className="progress-card">
             <p className="progress-card__label">Seu próximo passo</p>
             <p className="progress-card__title">Comece simples.</p>
