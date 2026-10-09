@@ -34,6 +34,15 @@
 .lead-status--lost { color: #7b4949; background: #f4e3e3; }
 .lead-row__date { margin-top: var(--space-2); color: var(--color-muted-text); font-size: .72rem; }
 .lead-row__action span { color: var(--color-muted-text); font-size: .75rem; }
+.lead-row__correction { min-height: 42px; padding: 9px 14px; white-space: nowrap; }
+.lead-correction-form { display: grid; gap: var(--space-4); margin-top: var(--space-5); }
+.lead-correction-form label { display: grid; gap: var(--space-2); }
+.lead-correction-form label > span { color: var(--color-primary); font-size: .78rem; font-weight: 700; }
+.lead-correction-form select,
+.lead-correction-form textarea { width: 100%; border: 1px solid var(--color-border); border-radius: 12px; color: var(--color-primary); background: var(--color-surface); font: inherit; }
+.lead-correction-form select { min-height: 46px; padding: 10px 12px; }
+.lead-correction-form textarea { min-height: 104px; padding: 12px; resize: vertical; }
+.lead-correction-form small { color: var(--color-muted-text); font-size: .72rem; }
 
 @media (min-width: 680px) {
   .lead-metrics { grid-template-columns: repeat(4, minmax(0, 1fr)); }

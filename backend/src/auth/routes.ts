@@ -11,6 +11,7 @@ import { createRateLimit } from '../security/rateLimit.js'
 import { verifyTurnstile } from '../security/turnstile.js'
 import { authenticate } from './middleware.js'
 import { clearSessionCookie, createSession, deleteSession, SESSION_COOKIE, setSessionCookie } from './session.js'
+import { PASSWORD_RESET_PUBLIC_MESSAGE, requestPasswordReset, resetPassword } from './passwordRecovery.js'
 
 const registerSchema = z.object({
   name: z.string().trim().min(2, 'Informe seu nome.').max(120),
@@ -30,6 +31,15 @@ const loginSchema = z.object({
   turnstileToken: z.string().trim().max(2048).optional(),
 })
 
+const forgotPasswordSchema = z.object({
+  email: z.string().trim().toLowerCase().email('Informe um e-mail válido.').max(320),
+}).strict()
+
+const resetPasswordSchema = z.object({
+  token: z.string().trim().min(32, 'Link de recuperação inválido.').max(256),
+  password: z.string().min(8, 'A senha deve ter pelo menos 8 caracteres.').max(128),
+}).strict()
+
 const registerRateLimit = createRateLimit({
   windowMs: 60 * 60 * 1000,
   max: 3,
@@ -42,6 +52,13 @@ const loginRateLimit = createRateLimit({
   max: 5,
   code: 'LOGIN_RATE_LIMITED',
   message: 'Muitas tentativas de login. Aguarde antes de tentar novamente.',
+})
+
+const forgotPasswordRateLimit = createRateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  code: 'PASSWORD_RESET_RATE_LIMITED',
+  message: 'Muitas solicitações de recuperação. Aguarde antes de tentar novamente.',
 })
 
 function publicUser(user: { id: number; name: string; email: string; phone: string | null; role: 'STUDENT' | 'ADMIN' }) {
@@ -103,6 +120,19 @@ authRouter.post('/login', loginRateLimit, asyncHandler(async (request, response)
   const session = await createSession(user.id)
   setSessionCookie(response, session.token, session.expiresAt)
   response.json({ user: publicUser(user) })
+}))
+
+authRouter.post('/forgot-password', forgotPasswordRateLimit, asyncHandler(async (request, response) => {
+  const input = forgotPasswordSchema.parse(request.body)
+  await requestPasswordReset(input.email)
+  response.status(202).json({ message: PASSWORD_RESET_PUBLIC_MESSAGE })
+}))
+
+authRouter.post('/reset-password', asyncHandler(async (request, response) => {
+  const input = resetPasswordSchema.parse(request.body)
+  await resetPassword(input.token, input.password)
+  clearSessionCookie(response)
+  response.json({ message: 'Senha atualizada com sucesso. Entre novamente para continuar.' })
 }))
 
 authRouter.post('/logout', asyncHandler(async (request, response) => {

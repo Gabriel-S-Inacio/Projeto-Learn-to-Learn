@@ -26,11 +26,23 @@ export const authSessions = pgTable('auth_sessions', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [index('auth_sessions_user_id_idx').on(table.userId), index('auth_sessions_expires_at_idx').on(table.expiresAt)])
 
+export const passwordResetTokens = pgTable('password_reset_tokens', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  tokenHash: varchar('token_hash', { length: 64 }).notNull().unique(),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  usedAt: timestamp('used_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  index('password_reset_tokens_user_id_idx').on(table.userId),
+  index('password_reset_tokens_expires_at_idx').on(table.expiresAt),
+])
+
 export const lessonSlots = pgTable('lesson_slots', {
   id: serial('id').primaryKey(),
   startsAt: timestamp('starts_at', { withTimezone: true }).notNull(),
   durationMinutes: integer('duration_minutes').notNull().default(60),
-  type: lessonType('type').notNull().default('TRIAL'),
+  type: lessonType('type'),
   status: lessonSlotStatus('status').notNull().default('AVAILABLE'),
   notes: text('notes'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -41,6 +53,7 @@ export const lessonBookings = pgTable('lesson_bookings', {
   id: serial('id').primaryKey(),
   slotId: integer('slot_id').notNull().references(() => lessonSlots.id, { onDelete: 'restrict' }),
   studentId: integer('student_id').notNull().references(() => users.id, { onDelete: 'restrict' }),
+  type: lessonType('type').notNull(),
   cancellationReason: text('cancellation_reason'),
   cancelledBy: integer('cancelled_by').references(() => users.id, { onDelete: 'restrict' }),
   cancelledAt: timestamp('cancelled_at', { withTimezone: true }),
@@ -86,6 +99,20 @@ export const leads = pgTable('leads', {
   index('leads_status_idx').on(table.status),
   index('leads_source_idx').on(table.source),
   index('leads_created_at_idx').on(table.createdAt),
+])
+
+export const leadStatusChanges = pgTable('lead_status_changes', {
+  id: bigint('id', { mode: 'number' }).primaryKey().generatedAlwaysAsIdentity(),
+  leadId: integer('lead_id').notNull().references(() => leads.id, { onDelete: 'restrict' }),
+  previousStatus: leadStatus('previous_status').notNull(),
+  newStatus: leadStatus('new_status').notNull(),
+  changedBy: integer('changed_by').notNull().references(() => users.id, { onDelete: 'restrict' }),
+  reason: text('reason').notNull(),
+  changedAt: timestamp('changed_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  index('lead_status_changes_lead_id_idx').on(table.leadId),
+  index('lead_status_changes_changed_by_idx').on(table.changedBy),
+  index('lead_status_changes_changed_at_idx').on(table.changedAt),
 ])
 
 export const analyticsEvents = pgTable('analytics_events', {

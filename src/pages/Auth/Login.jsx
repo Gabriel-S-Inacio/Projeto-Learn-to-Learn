@@ -57,6 +57,7 @@ export default function Login() {
           <form className="auth-form" onSubmit={handleSubmit}>
             <div className="form-field"><label htmlFor="login-email">E-mail</label><input autoComplete="email" id="login-email" name="email" onChange={(event) => setForm({ ...form, email: event.target.value })} required type="email" value={form.email} /></div>
             <div className="form-field"><label htmlFor="login-password">Senha</label><input autoComplete="current-password" id="login-password" minLength="8" name="password" onChange={(event) => setForm({ ...form, password: event.target.value })} required type="password" value={form.password} /></div>
+            <Link className="auth-form__forgot" to="/forgot-password">Esqueci minha senha</Link>
             <TurnstileWidget action="login" key={challengeKey} onError={() => setError('Não foi possível validar a proteção antibot.')} onVerify={setTurnstileToken} />
             {error && <p className="form-error" role="alert">{error}</p>}
             <Button disabled={submitting || !turnstileToken} type="submit">{submitting ? 'Entrando...' : 'Entrar'}</Button>

@@ -1,0 +1,169 @@
+.account-page {
+  min-height: 72vh;
+  overflow-x: clip;
+  padding-block: clamp(var(--space-12), 6vw, var(--space-20)) var(--space-20);
+}
+
+.account-heading,
+.account-grid {
+  width: min(calc(100% - 40px), 1080px);
+  max-width: none;
+  margin-inline: auto;
+}
+
+.account-heading h1 {
+  max-width: 680px;
+  margin-top: var(--space-4);
+  color: var(--color-primary);
+  font-family: var(--font-editorial);
+  font-size: clamp(2.65rem, 5vw, 3.75rem);
+  font-weight: 400;
+  letter-spacing: -.015em;
+  line-height: 1.04;
+}
+
+.account-heading > p {
+  max-width: 600px;
+  margin-top: var(--space-4);
+  color: var(--color-muted-text);
+  font-size: 1rem;
+  line-height: 1.65;
+}
+
+.account-grid {
+  display: grid;
+  gap: var(--space-6);
+  margin-top: var(--space-8);
+}
+
+.account-card {
+  display: flex;
+  width: 100%;
+  max-width: 680px;
+  min-width: 0;
+  flex-direction: column;
+  margin-inline: auto;
+  padding: var(--space-7);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-soft);
+}
+
+.account-card__kicker {
+  color: var(--color-muted-text);
+  font-size: .68rem;
+  font-weight: 800;
+  letter-spacing: .12em;
+  line-height: 1.3;
+  text-transform: uppercase;
+}
+
+.account-card h2 {
+  margin-top: var(--space-2);
+  color: var(--color-primary);
+  font-family: var(--font-editorial);
+  font-size: clamp(1.55rem, 2.4vw, 1.8rem);
+  font-weight: 400;
+  line-height: 1.15;
+}
+
+.account-form {
+  display: flex;
+  width: 100%;
+  max-width: 480px;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin: var(--space-6) auto 0;
+}
+
+.account-form .form-field {
+  min-width: 0;
+  gap: 7px;
+}
+
+.account-form .form-field input {
+  width: 100%;
+  height: 48px;
+  min-height: 48px;
+  padding: 10px 13px;
+}
+
+.account-form .button {
+  width: 100%;
+  min-height: 48px;
+  margin-top: auto;
+  padding-block: 10px;
+}
+
+.account-form label small {
+  color: var(--color-muted-text);
+  font-weight: 500;
+}
+
+.account-form input:disabled {
+  cursor: not-allowed;
+  opacity: .72;
+}
+
+@media (max-width: 480px) {
+  .account-page {
+    padding-block: var(--space-10) var(--space-16);
+  }
+
+  .account-heading,
+  .account-grid {
+    width: min(calc(100% - 32px), 1080px);
+  }
+
+  .account-heading h1 {
+    font-size: clamp(2.35rem, 12vw, 2.8rem);
+    line-height: 1.06;
+  }
+
+  .account-heading > p {
+    margin-top: var(--space-3);
+    font-size: .95rem;
+  }
+
+  .account-grid {
+    gap: var(--space-5);
+    margin-top: var(--space-7);
+  }
+
+  .account-card {
+    padding: var(--space-5);
+  }
+
+  .account-card h2 {
+    font-size: 1.5rem;
+  }
+
+  .account-form {
+    gap: var(--space-4);
+    margin-top: var(--space-5);
+  }
+}
+
+@media (min-width: 900px) {
+  .account-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-7);
+    align-items: stretch;
+  }
+
+  .account-card {
+    max-width: none;
+    margin-inline: 0;
+    padding: var(--space-8);
+  }
+}
+
+@media (min-width: 1024px) {
+  .account-heading,
+  .account-grid {
+    width: min(calc(100% - 64px), 1080px);
+  }
+}

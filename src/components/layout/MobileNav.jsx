@@ -14,9 +14,12 @@ export default function MobileNav({ isOpen, onNavigate }) {
             {item.label}
           </NavLink>
         ))}
-        <NavLink className="mobile-nav__link" onClick={onNavigate} to={status === 'authenticated' && user.role === 'ADMIN' ? '/admin/agenda' : status === 'authenticated' ? '/minhas-aulas' : '/login'}>
-          {status === 'authenticated' ? 'Minha conta' : 'Entrar'}
-        </NavLink>
+        {status === 'authenticated' ? (
+          <>
+            <NavLink className="mobile-nav__link" onClick={onNavigate} to={user.role === 'ADMIN' ? '/admin/agenda' : '/minhas-aulas'}>{user.role === 'ADMIN' ? 'Administração' : 'Minhas aulas'}</NavLink>
+            <NavLink className="mobile-nav__link" onClick={onNavigate} to="/minha-conta">Minha conta</NavLink>
+          </>
+        ) : <NavLink className="mobile-nav__link" onClick={onNavigate} to="/login">Entrar</NavLink>}
         {status === 'authenticated' && <button className="mobile-nav__logout" onClick={() => { void signOut(); onNavigate() }} type="button">Sair</button>}
         <NavLink className="mobile-nav__cta" onClick={onNavigate} to="/agendar">Agendar aula</NavLink>
       </nav>

@@ -12,8 +12,21 @@ export const leadTransitions: Record<LeadStatus, LeadStatus[]> = {
   LOST: [],
 }
 
+export const leadCorrectionTransitions: Record<LeadStatus, LeadStatus[]> = {
+  NEW: [],
+  INTERESTED: [],
+  SCHEDULED: [],
+  TRIAL_COMPLETED: [],
+  CONVERTED: ['TRIAL_COMPLETED'],
+  LOST: ['NEW', 'INTERESTED', 'SCHEDULED', 'TRIAL_COMPLETED'],
+}
+
 export function canTransitionLead(from: LeadStatus, to: LeadStatus) {
   return leadTransitions[from].includes(to)
+}
+
+export function canCorrectLeadStatus(from: LeadStatus, to: LeadStatus) {
+  return leadCorrectionTransitions[from].includes(to)
 }
 
 export async function createOrMergePublicLead(input: {
@@ -62,8 +75,11 @@ export async function ensureLeadForUser(client: PoolClient, userId: number, sour
   if (!user?.phone) throw new AppError(409, 'USER_CONTACT_INCOMPLETE', 'O usuário não possui contato suficiente para associação ao lead.')
 
   let leadResult = await client.query<{ id: number; status: LeadStatus; converted_user_id: number | null }>(
-    'SELECT id, status, converted_user_id FROM leads WHERE lower(email) = lower($1) FOR UPDATE',
-    [user.email],
+    `SELECT id, status, converted_user_id FROM leads
+     WHERE converted_user_id = $1 OR lower(email) = lower($2)
+     ORDER BY (converted_user_id = $1) DESC
+     LIMIT 1 FOR UPDATE`,
+    [userId, user.email],
   )
   if (!leadResult.rowCount) {
     leadResult = await client.query(

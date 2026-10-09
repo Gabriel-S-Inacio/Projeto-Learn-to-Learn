@@ -10,6 +10,7 @@ export default defineConfig({
       WHATSAPP_PROVIDER: 'disabled',
     },
     fileParallelism: false,
+    pool: 'threads',
     sequence: { concurrent: false },
     testTimeout: 15_000,
   },

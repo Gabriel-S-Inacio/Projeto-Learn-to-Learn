@@ -43,7 +43,7 @@ adminRouter.get('/schedule', asyncHandler(async (_request, response) => {
     id: number
     starts_at: Date
     duration_minutes: number
-    type: 'TRIAL' | 'REGULAR'
+    booking_type: 'TRIAL' | 'REGULAR' | null
     status: string
     notes: string | null
     booking_id: number | null
@@ -54,7 +54,7 @@ adminRouter.get('/schedule', asyncHandler(async (_request, response) => {
     cancelled_at: Date | null
     cancelled_by_name: string | null
   }>(
-    `SELECT s.id, s.starts_at, s.duration_minutes, s.type, s.status, s.notes,
+    `SELECT s.id, s.starts_at, s.duration_minutes, s.status, s.notes, b.type AS booking_type,
             b.id AS booking_id, u.name AS student_name, u.email AS student_email, u.phone AS student_phone,
             b.cancellation_reason, b.cancelled_at, cancelled_by.name AS cancelled_by_name
      FROM lesson_slots s
@@ -67,7 +67,7 @@ adminRouter.get('/schedule', asyncHandler(async (_request, response) => {
     id: row.id,
     startsAt: row.starts_at.toISOString(),
     durationMinutes: row.duration_minutes,
-    type: row.type,
+    type: row.booking_type,
     status: row.status,
     notes: row.notes,
     booking: row.booking_id ? {
@@ -119,22 +119,21 @@ adminRouter.post('/lessons', asyncHandler(async (request, response) => {
       id: number
       starts_at: Date
       duration_minutes: number
-      type: 'REGULAR'
       status: 'BOOKED'
       notes: string | null
     }>(
-      `INSERT INTO lesson_slots (starts_at, duration_minutes, type, status, notes)
-       VALUES ($1, $2, 'REGULAR', 'BOOKED', $3)
+      `INSERT INTO lesson_slots (starts_at, duration_minutes, status, notes)
+       VALUES ($1, $2, 'BOOKED', $3)
        ON CONFLICT (starts_at) DO NOTHING
-       RETURNING id, starts_at, duration_minutes, type, status, notes`,
+       RETURNING id, starts_at, duration_minutes, status, notes`,
       [startsAt, input.durationMinutes, input.notes ?? null],
     )
     const slot = slotResult.rows[0]
     if (!slot) throw new AppError(409, 'LESSON_TIME_CONFLICT', 'Já existe uma aula ou horário neste momento.')
 
     const bookingResult = await client.query<{ id: number }>(
-      `INSERT INTO lesson_bookings (slot_id, student_id)
-       VALUES ($1, $2)
+      `INSERT INTO lesson_bookings (slot_id, student_id, type)
+       VALUES ($1, $2, 'REGULAR')
        RETURNING id`,
       [slot.id, input.studentId],
     )
@@ -145,7 +144,7 @@ adminRouter.post('/lessons', asyncHandler(async (request, response) => {
         id: slot.id,
         startsAt: slot.starts_at.toISOString(),
         durationMinutes: slot.duration_minutes,
-        type: slot.type,
+        type: 'REGULAR',
         status: slot.status,
         notes: slot.notes,
         bookingId: bookingResult.rows[0]!.id,
@@ -172,14 +171,14 @@ adminRouter.post('/schedule', asyncHandler(async (request, response) => {
   const startsAt = new Date(input.startsAt)
   if (startsAt.getTime() <= Date.now()) throw new AppError(422, 'PAST_SLOT', 'O horário precisa estar no futuro.')
 
-  const result = await pool.query<{ id: number; starts_at: Date; duration_minutes: number; type: 'TRIAL'; status: string; notes: string | null }>(
-    `INSERT INTO lesson_slots (starts_at, duration_minutes, type, status, notes)
-     VALUES ($1, $2, 'TRIAL', $3, $4)
-     RETURNING id, starts_at, duration_minutes, type, status, notes`,
+  const result = await pool.query<{ id: number; starts_at: Date; duration_minutes: number; status: string; notes: string | null }>(
+    `INSERT INTO lesson_slots (starts_at, duration_minutes, status, notes)
+     VALUES ($1, $2, $3, $4)
+     RETURNING id, starts_at, duration_minutes, status, notes`,
     [startsAt, input.durationMinutes, input.status, input.notes ?? null],
   )
   const slot = result.rows[0]!
-  response.status(201).json({ slot: { id: slot.id, startsAt: slot.starts_at.toISOString(), durationMinutes: slot.duration_minutes, type: slot.type, status: slot.status, notes: slot.notes } })
+  response.status(201).json({ slot: { id: slot.id, startsAt: slot.starts_at.toISOString(), durationMinutes: slot.duration_minutes, status: slot.status, notes: slot.notes } })
 }))
 
 adminRouter.patch('/schedule/:id', asyncHandler(async (request, response) => {
@@ -188,8 +187,9 @@ adminRouter.patch('/schedule/:id', asyncHandler(async (request, response) => {
   const client = await pool.connect()
   try {
     await client.query('BEGIN')
-    const result = await client.query<{ id: number; status: string; type: 'TRIAL' | 'REGULAR'; has_cancellation: boolean }>(
-      `SELECT s.id, s.status, s.type,
+    const result = await client.query<{ id: number; status: string; booking_type: 'TRIAL' | 'REGULAR' | null; has_cancellation: boolean }>(
+      `SELECT s.id, s.status,
+              (SELECT b.type FROM lesson_bookings b WHERE b.slot_id = s.id LIMIT 1) AS booking_type,
               EXISTS (
                 SELECT 1 FROM lesson_bookings b
                 WHERE b.slot_id = s.id AND b.cancelled_at IS NOT NULL
@@ -213,16 +213,16 @@ adminRouter.patch('/schedule/:id', asyncHandler(async (request, response) => {
       }
     }
 
-    const updated = await client.query<{ id: number; starts_at: Date; duration_minutes: number; type: 'TRIAL' | 'REGULAR'; status: string; notes: string | null }>(
+    const updated = await client.query<{ id: number; starts_at: Date; duration_minutes: number; status: string; notes: string | null }>(
       `UPDATE lesson_slots
        SET status = COALESCE($2::lesson_slot_status, status),
            notes = CASE WHEN $3::boolean THEN $4 ELSE notes END,
            updated_at = now()
        WHERE id = $1
-       RETURNING id, starts_at, duration_minutes, type, status, notes`,
+       RETURNING id, starts_at, duration_minutes, status, notes`,
       [slotId, input.status ?? null, Object.prototype.hasOwnProperty.call(input, 'notes'), input.notes ?? null],
     )
-    if (input.status === 'COMPLETED' && slot.type === 'TRIAL') {
+    if (input.status === 'COMPLETED' && slot.booking_type === 'TRIAL') {
       const booking = await client.query<{ student_id: number }>('SELECT student_id FROM lesson_bookings WHERE slot_id = $1', [slotId])
       const studentId = booking.rows[0]?.student_id
       if (studentId) {
@@ -233,7 +233,7 @@ adminRouter.patch('/schedule/:id', asyncHandler(async (request, response) => {
     }
     await client.query('COMMIT')
     const value = updated.rows[0]!
-    response.json({ slot: { id: value.id, startsAt: value.starts_at.toISOString(), durationMinutes: value.duration_minutes, type: value.type, status: value.status, notes: value.notes } })
+    response.json({ slot: { id: value.id, startsAt: value.starts_at.toISOString(), durationMinutes: value.duration_minutes, type: slot.booking_type, status: value.status, notes: value.notes } })
   } catch (error) {
     await client.query('ROLLBACK')
     throw error

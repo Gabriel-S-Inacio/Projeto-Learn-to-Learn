@@ -105,13 +105,11 @@ export default function MyLessons() {
                 <article className="lesson-card" key={lesson.bookingId}>
                   <div className="lesson-card__date"><span>{formatShortDate(lesson.startsAt)}</span><strong>{formatTime(lesson.startsAt)}</strong></div>
                   <div className="lesson-card__meta"><span>{typeLabels[lesson.type || 'TRIAL']}</span><small>{lesson.durationMinutes} minutos · {statusLabels[lesson.status]}</small></div>
-                  {lesson.type !== 'REGULAR' && (
-                    <div className="lesson-card__actions">
-                      <Button disabled={!canChange || busy} onClick={() => void openReschedule(lesson)} type="button" variant="outline">Remarcar</Button>
-                      <Button disabled={!canChange || busy} onClick={() => setDialog({ type: 'cancel', lesson })} type="button" variant="danger">Cancelar</Button>
-                    </div>
-                  )}
-                  {lesson.type !== 'REGULAR' && !canChange && <p className="lesson-card__rule">Alterações encerradas: faltam menos de 24 horas.</p>}
+                  <div className="lesson-card__actions">
+                    <Button disabled={!canChange || busy} onClick={() => void openReschedule(lesson)} type="button" variant="outline">Remarcar</Button>
+                    <Button disabled={!canChange || busy} onClick={() => setDialog({ type: 'cancel', lesson })} type="button" variant="danger">Cancelar</Button>
+                  </div>
+                  {!canChange && <p className="lesson-card__rule">Alterações encerradas: faltam menos de 24 horas.</p>}
                 </article>
               )
             })}

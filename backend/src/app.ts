@@ -10,6 +10,7 @@ import { errorHandler, notFoundHandler } from './http/errors.js'
 import { scheduleRouter } from './schedule/routes.js'
 import { analyticsRouter } from './analytics/routes.js'
 import { leadsRouter } from './leads/routes.js'
+import { accountRouter } from './account/routes.js'
 
 export function createApp() {
   const app = express()
@@ -21,6 +22,7 @@ export function createApp() {
 
   app.get('/api/health', (_request, response) => response.json({ status: 'ok' }))
   app.use('/api/auth', authRouter)
+  app.use('/api/account', accountRouter)
   app.use('/api/leads', leadsRouter)
   app.use('/api/analytics', analyticsRouter)
   app.use('/api/schedule', scheduleRouter)

@@ -201,7 +201,7 @@ export default function AdminSchedule() {
       <header className="admin-header">
         <div>
           <Link className="admin-brand" to="/">Learn to Learn</Link>
-          <nav className="admin-nav"><Link className="is-active" to="/admin/agenda">Agenda</Link><Link to="/admin/leads">Leads</Link></nav>
+          <nav className="admin-nav"><Link className="is-active" to="/admin/agenda">Agenda</Link><Link to="/admin/leads">Leads</Link><Link to="/minha-conta">Minha conta</Link></nav>
         </div>
         <div className="admin-header__account">
           <span>{user.name}</span>
@@ -229,7 +229,7 @@ export default function AdminSchedule() {
           <div className="admin-create-column">
             <aside className="admin-create">
               <h2>Novo horário</h2>
-              <p>A aula experimental pode durar no máximo 60 minutos.</p>
+              <p>Crie horários disponíveis para agendamento dos alunos.</p>
               <form onSubmit={handleCreate}>
               <div className="form-field">
                 <label htmlFor="slot-start">Data e hora</label>
@@ -310,7 +310,7 @@ export default function AdminSchedule() {
                       <span>{formatTime(slot.startsAt)} · {slot.durationMinutes} minutos</span>
                     </div>
                     <div className="admin-slot__badges">
-                      <span className={`admin-type admin-type--${(slot.type || 'TRIAL').toLowerCase()}`}>{typeLabels[slot.type || 'TRIAL']}</span>
+                      {slot.booking && slot.type && <span className={`admin-type admin-type--${slot.type.toLowerCase()}`}>{typeLabels[slot.type]}</span>}
                       <span className={`admin-status admin-status--${slot.booking?.cancellation ? 'cancelled' : slot.status.toLowerCase()}`}>{slot.booking?.cancellation ? 'Cancelado' : statusLabels[slot.status]}</span>
                     </div>
                     <div className="admin-slot__details">

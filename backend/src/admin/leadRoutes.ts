@@ -3,7 +3,12 @@ import { z } from 'zod'
 import { pool } from '../db/client.js'
 import { leadSource, leadStatus, type LeadStatus } from '../db/schema.js'
 import { AppError, asyncHandler } from '../http/errors.js'
-import { canTransitionLead, leadTransitions } from '../leads/service.js'
+import {
+  canCorrectLeadStatus,
+  canTransitionLead,
+  leadCorrectionTransitions,
+  leadTransitions,
+} from '../leads/service.js'
 import { recordAnalyticsEvent } from '../analytics/service.js'
 
 const listSchema = z.object({
@@ -15,6 +20,10 @@ const listSchema = z.object({
 })
 const idSchema = z.coerce.number().int().positive()
 const statusSchema = z.object({ status: z.enum(leadStatus.enumValues) })
+const correctionSchema = z.object({
+  status: z.enum(leadStatus.enumValues),
+  reason: z.string().trim().min(5, 'Informe um motivo com pelo menos 5 caracteres.').max(500),
+})
 
 function period(query: z.infer<typeof listSchema>) {
   const to = query.to ? new Date(query.to) : new Date()
@@ -37,13 +46,15 @@ adminLeadRouter.get('/metrics', asyncHandler(async (request, response) => {
      )
      SELECT
        (SELECT count(*)::int FROM cohort) AS leads,
+       (SELECT count(*)::int FROM lesson_bookings b
+         WHERE b.type = 'TRIAL' AND b.created_at >= $1 AND b.created_at < $2) AS bookings,
        (SELECT count(*)::int FROM lesson_bookings b JOIN lesson_slots s ON s.id = b.slot_id
-         WHERE s.type = 'TRIAL' AND b.created_at >= $1 AND b.created_at < $2) AS bookings,
-       (SELECT count(*)::int FROM lesson_slots WHERE type = 'TRIAL' AND status = 'COMPLETED' AND updated_at >= $1 AND updated_at < $2) AS trials,
-       (SELECT count(*)::int FROM leads WHERE converted_at >= $1 AND converted_at < $2) AS conversions,
+         WHERE b.type = 'TRIAL' AND s.status = 'COMPLETED' AND s.updated_at >= $1 AND s.updated_at < $2) AS trials,
+       (SELECT count(*)::int FROM leads
+         WHERE status = 'CONVERTED' AND converted_at >= $1 AND converted_at < $2) AS conversions,
        (SELECT count(*)::int FROM cohort WHERE scheduled_at IS NOT NULL) AS funnel_scheduled,
        (SELECT count(*)::int FROM cohort WHERE trial_completed_at IS NOT NULL) AS funnel_trials,
-       (SELECT count(*)::int FROM cohort WHERE converted_at IS NOT NULL) AS funnel_converted`,
+       (SELECT count(*)::int FROM cohort WHERE status = 'CONVERTED') AS funnel_converted`,
     [from, to],
   )
   const values = result.rows[0]!
@@ -88,6 +99,7 @@ adminLeadRouter.get('/', asyncHandler(async (request, response) => {
       convertedUserId: lead.converted_user_id, userName: lead.user_name,
       createdAt: lead.created_at.toISOString(), updatedAt: lead.updated_at.toISOString(),
       allowedTransitions: leadTransitions[lead.status],
+      allowedCorrections: leadCorrectionTransitions[lead.status],
     })),
   })
 }))
@@ -117,7 +129,69 @@ adminLeadRouter.patch('/:id/status', asyncHandler(async (request, response) => {
       await recordAnalyticsEvent(client, { eventName: 'lead_converted', leadId, userId: lead.converted_user_id, metadata: { previousStatus: lead.status } })
     }
     await client.query('COMMIT')
-    response.json({ lead: { id: leadId, status: input.status, allowedTransitions: leadTransitions[input.status] } })
+    response.json({
+      lead: {
+        id: leadId,
+        status: input.status,
+        allowedTransitions: leadTransitions[input.status],
+        allowedCorrections: leadCorrectionTransitions[input.status],
+      },
+    })
+  } catch (error) {
+    await client.query('ROLLBACK')
+    throw error
+  } finally {
+    client.release()
+  }
+}))
+
+adminLeadRouter.patch('/:id/reopen', asyncHandler(async (request, response) => {
+  const leadId = idSchema.parse(request.params.id)
+  const input = correctionSchema.parse(request.body)
+  const client = await pool.connect()
+  try {
+    await client.query('BEGIN')
+    const result = await client.query<{ status: LeadStatus }>(
+      'SELECT status FROM leads WHERE id = $1 FOR UPDATE',
+      [leadId],
+    )
+    const lead = result.rows[0]
+    if (!lead) throw new AppError(404, 'LEAD_NOT_FOUND', 'Lead não encontrado.')
+    if (!canCorrectLeadStatus(lead.status, input.status)) {
+      throw new AppError(409, 'INVALID_LEAD_CORRECTION', `A correção ${lead.status} → ${input.status} não é permitida.`)
+    }
+
+    await client.query(
+      `UPDATE leads SET
+         status = $2::lead_status,
+         scheduled_at = CASE
+           WHEN $2::lead_status IN ('SCHEDULED', 'TRIAL_COMPLETED') THEN COALESCE(scheduled_at, now())
+           ELSE NULL
+         END,
+         trial_completed_at = CASE
+           WHEN $2::lead_status = 'TRIAL_COMPLETED' THEN COALESCE(trial_completed_at, now())
+           ELSE NULL
+         END,
+         converted_at = NULL,
+         updated_at = now()
+       WHERE id = $1`,
+      [leadId, input.status],
+    )
+    await client.query(
+      `INSERT INTO lead_status_changes
+         (lead_id, previous_status, new_status, changed_by, reason)
+       VALUES ($1, $2::lead_status, $3::lead_status, $4, $5)`,
+      [leadId, lead.status, input.status, request.auth!.userId, input.reason],
+    )
+    await client.query('COMMIT')
+    response.json({
+      lead: {
+        id: leadId,
+        status: input.status,
+        allowedTransitions: leadTransitions[input.status],
+        allowedCorrections: leadCorrectionTransitions[input.status],
+      },
+    })
   } catch (error) {
     await client.query('ROLLBACK')
     throw error

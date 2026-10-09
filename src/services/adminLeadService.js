@@ -18,3 +18,10 @@ export function getLeadMetrics(filters = {}) {
 export function updateLeadStatus(leadId, status) {
   return apiRequest(`/admin/leads/${leadId}/status`, { method: 'PATCH', body: JSON.stringify({ status }) })
 }
+
+export function reopenLead(leadId, status, reason) {
+  return apiRequest(`/admin/leads/${leadId}/reopen`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status, reason }),
+  })
+}

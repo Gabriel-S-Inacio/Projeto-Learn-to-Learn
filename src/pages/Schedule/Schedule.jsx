@@ -6,7 +6,7 @@ import Button from '../../components/ui/Button'
 import Eyebrow from '../../components/ui/Eyebrow'
 import StatePanel from '../../components/ui/StatePanel'
 import { useAuth } from '../../context/AuthContext'
-import { createBooking } from '../../services/bookingService'
+import { createBooking, getBookingEligibility } from '../../services/bookingService'
 import { getAvailableSlots } from '../../services/scheduleService'
 import { formatScheduleDate, formatTime, scheduleDayKey } from '../../utils/dateTime'
 import './Schedule.css'
@@ -17,6 +17,7 @@ export default function Schedule() {
   const [selectedSlot, setSelectedSlot] = useState(null)
   const [feedback, setFeedback] = useState(null)
   const [booking, setBooking] = useState(false)
+  const [eligibility, setEligibility] = useState({ status: 'idle', canBook: true, nextLessonType: null, message: null })
   const { status: authStatus, user } = useAuth()
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -34,16 +35,40 @@ export default function Schedule() {
   useEffect(() => { void loadSchedule() }, [loadSchedule])
 
   useEffect(() => {
+    let active = true
+    if (authStatus !== 'authenticated' || user.role !== 'STUDENT') {
+      setEligibility({ status: 'idle', canBook: true, nextLessonType: null, message: null })
+      return () => { active = false }
+    }
+
+    setEligibility({ status: 'loading', canBook: true, nextLessonType: null, message: null })
+    void getBookingEligibility()
+      .then((result) => {
+        if (active) setEligibility({ status: 'ready', ...result })
+      })
+      .catch(() => {
+        if (active) setEligibility({ status: 'error', canBook: true, nextLessonType: null, message: null })
+      })
+    return () => { active = false }
+  }, [authStatus, user])
+
+  useEffect(() => {
     void trackEvent('schedule_viewed', { metadata: { availability: 'requested' } }).catch(() => undefined)
   }, [])
 
   useEffect(() => {
     const selectedId = Number(searchParams.get('slotId'))
+    const isStudent = authStatus === 'authenticated' && user.role === 'STUDENT'
+    const eligibilityKnown = eligibility.status === 'ready' || eligibility.status === 'error'
+    if (!isStudent || !eligibilityKnown || (eligibility.status === 'ready' && !eligibility.canBook)) {
+      setSelectedSlot(null)
+      return
+    }
     if (selectedId && schedule.data.length) {
       const slot = schedule.data.find((item) => item.id === selectedId)
       if (slot) setSelectedSlot(slot)
     }
-  }, [schedule.data, searchParams])
+  }, [authStatus, eligibility, schedule.data, searchParams, user])
 
   const groups = useMemo(() => Object.values(schedule.data.reduce((result, slot) => {
     const key = scheduleDayKey(slot.startsAt)
@@ -51,6 +76,11 @@ export default function Schedule() {
     result[key].slots.push(slot)
     return result
   }, {})), [schedule.data])
+
+  const bookingBlocked = authStatus === 'authenticated' && user.role === 'STUDENT'
+    && eligibility.status === 'ready' && !eligibility.canBook
+  const checkingEligibility = authStatus === 'authenticated' && user.role === 'STUDENT'
+    && eligibility.status !== 'ready' && eligibility.status !== 'error'
 
   function chooseSlot(slot) {
     setFeedback(null)
@@ -63,6 +93,10 @@ export default function Schedule() {
       setFeedback({ tone: 'error', message: 'A reserva está disponível somente para contas de aluno.' })
       return
     }
+    if (eligibility.status === 'ready' && !eligibility.canBook) {
+      setFeedback({ tone: 'info', message: eligibility.message })
+      return
+    }
     setSelectedSlot(slot)
     setSearchParams({ slotId: String(slot.id) }, { replace: true })
   }
@@ -70,14 +104,20 @@ export default function Schedule() {
   async function confirmBooking() {
     setBooking(true)
     try {
-      await createBooking(selectedSlot.id)
+      const result = await createBooking(selectedSlot.id)
       setSelectedSlot(null)
       setSearchParams({}, { replace: true })
-      setFeedback({ tone: 'success', message: 'Aula experimental reservada. Ela já está disponível em Minhas Aulas.' })
+      const lessonLabel = result.booking.type === 'REGULAR' ? 'Aula regular' : 'Aula experimental'
+      setFeedback({ tone: 'success', message: `${lessonLabel} reservada. Ela já está disponível em Minhas Aulas.` })
       await loadSchedule()
     } catch (error) {
       setSelectedSlot(null)
-      setFeedback({ tone: 'error', message: error.message })
+      if (error.code === 'TRIAL_ALREADY_COMPLETED') {
+        setEligibility({ status: 'ready', canBook: false, nextLessonType: null, message: error.message })
+        setFeedback(null)
+      } else {
+        setFeedback({ tone: 'error', message: error.message })
+      }
       await loadSchedule()
     } finally {
       setBooking(false)
@@ -100,6 +140,7 @@ export default function Schedule() {
       )}
 
       <section className="schedule-content container">
+        {bookingBlocked && <p className="schedule-feedback schedule-feedback--info" role="status">{eligibility.message}</p>}
         {feedback && <p className={`schedule-feedback schedule-feedback--${feedback.tone}`} role="status">{feedback.message}</p>}
         {schedule.status === 'loading' && <StatePanel title="Carregando horários..."><span className="schedule-spinner" /></StatePanel>}
         {schedule.status === 'error' && <StatePanel title="Não foi possível carregar os horários." tone="error"><p>{schedule.error?.message || 'Tente novamente em instantes.'}</p><Button onClick={() => void loadSchedule()} type="button">Tentar novamente</Button></StatePanel>}
@@ -113,7 +154,9 @@ export default function Schedule() {
                   {group.slots.map((slot) => (
                     <div className="schedule-slot" key={slot.id}>
                       <div><strong>{formatTime(slot.startsAt)}</strong><small>{slot.durationMinutes} minutos</small></div>
-                      <Button onClick={() => chooseSlot(slot)} type="button" variant={authStatus === 'authenticated' ? 'solid' : 'muted'}>{authStatus === 'authenticated' ? 'Reservar' : 'Entrar'}</Button>
+                      <Button disabled={bookingBlocked || checkingEligibility} onClick={() => chooseSlot(slot)} type="button" variant={authStatus === 'authenticated' ? 'solid' : 'muted'}>
+                        {authStatus !== 'authenticated' ? 'Entrar' : bookingBlocked ? 'Indisponível' : checkingEligibility ? 'Verificando...' : 'Reservar'}
+                      </Button>
                     </div>
                   ))}
                 </div>
@@ -124,7 +167,7 @@ export default function Schedule() {
       </section>
 
       {selectedSlot && (
-        <ConfirmDialog busy={booking} confirmLabel="Confirmar reserva" onCancel={() => { setSelectedSlot(null); setSearchParams({}, { replace: true }) }} onConfirm={() => void confirmBooking()} title="Confirmar aula experimental">
+        <ConfirmDialog busy={booking} confirmLabel="Confirmar reserva" onCancel={() => { setSelectedSlot(null); setSearchParams({}, { replace: true }) }} onConfirm={() => void confirmBooking()} title="Confirmar agendamento">
           <p><strong>{formatScheduleDate(selectedSlot.startsAt)}</strong>, às <strong>{formatTime(selectedSlot.startsAt)}</strong>.</p>
           <p>Duração: {selectedSlot.durationMinutes} minutos.</p>
         </ConfirmDialog>

@@ -5,6 +5,9 @@ import { ensureLeadForUser } from '../leads/service.js'
 import { recordAnalyticsEvent } from '../analytics/service.js'
 import { notificationService } from '../notifications/service.js'
 
+type LessonType = 'TRIAL' | 'REGULAR'
+const TRIAL_COMPLETED_MESSAGE = 'Sua aula experimental já foi concluída. Aguarde a liberação das aulas regulares pela administração.'
+
 async function transaction<T>(operation: (client: PoolClient) => Promise<T>) {
   const client = await pool.connect()
   try {
@@ -25,7 +28,7 @@ export async function createBooking(studentId: number, slotId: number, sessionId
     const slotResult = await client.query<{ id: number }>(
       `UPDATE lesson_slots
        SET status = 'BOOKED', updated_at = now()
-       WHERE id = $1 AND status = 'AVAILABLE' AND type = 'TRIAL' AND starts_at > now()
+       WHERE id = $1 AND status = 'AVAILABLE' AND type IS NULL AND starts_at > now()
        RETURNING id`,
       [slotId],
     )
@@ -36,18 +39,38 @@ export async function createBooking(studentId: number, slotId: number, sessionId
       throw new AppError(409, 'SLOT_UNAVAILABLE', 'Este horário não está mais disponível.')
     }
 
-    const booking = await client.query<{ id: number }>(
-      `INSERT INTO lesson_bookings (slot_id, student_id)
-       VALUES ($1, $2)
-       RETURNING id`,
-      [slotId, studentId],
+    const lead = await client.query<{ status: string }>(
+      'SELECT status FROM leads WHERE converted_user_id = $1 LIMIT 1 FOR SHARE',
+      [studentId],
+    )
+    const lessonType: LessonType = lead.rows[0]?.status === 'CONVERTED' ? 'REGULAR' : 'TRIAL'
+    if (lessonType === 'TRIAL') {
+      const completedTrial = await client.query(
+        `SELECT 1
+         FROM lesson_bookings b
+         JOIN lesson_slots s ON s.id = b.slot_id
+         WHERE b.student_id = $1 AND b.type = 'TRIAL' AND s.status = 'COMPLETED'
+           AND b.cancelled_at IS NULL
+         LIMIT 1`,
+        [studentId],
+      )
+      if (completedTrial.rowCount) {
+        throw new AppError(409, 'TRIAL_ALREADY_COMPLETED', TRIAL_COMPLETED_MESSAGE)
+      }
+    }
+
+    const booking = await client.query<{ id: number; type: LessonType }>(
+      `INSERT INTO lesson_bookings (slot_id, student_id, type)
+       VALUES ($1, $2, $3::lesson_type)
+       RETURNING id, type`,
+      [slotId, studentId, lessonType],
     )
     const leadId = await ensureLeadForUser(client, studentId, 'SCHEDULE', 'SCHEDULED')
     await recordAnalyticsEvent(client, {
       eventName: 'booking_completed', userId: studentId, leadId, sessionId,
       metadata: { bookingId: booking.rows[0]!.id, slotId },
     })
-    return { bookingId: booking.rows[0]!.id, slotId }
+    return { bookingId: booking.rows[0]!.id, slotId, type: booking.rows[0]!.type }
   })
   await notificationService.sendBookingConfirmation(result.bookingId)
   return result
@@ -65,9 +88,9 @@ export async function cancelBooking(studentId: number, bookingId: number, now = 
       slot_id: number
       starts_at: Date
       status: string
-      type: string
+      type: 'TRIAL' | 'REGULAR'
     }>(
-      `SELECT b.id, b.student_id, b.slot_id, s.starts_at, s.status, s.type
+      `SELECT b.id, b.student_id, b.slot_id, s.starts_at, s.status, b.type
        FROM lesson_bookings b
        JOIN lesson_slots s ON s.id = b.slot_id
        WHERE b.id = $1
@@ -78,7 +101,6 @@ export async function cancelBooking(studentId: number, bookingId: number, now = 
     if (!booking) throw new AppError(404, 'BOOKING_NOT_FOUND', 'Reserva não encontrada.')
     if (booking.student_id !== studentId) throw new AppError(403, 'FORBIDDEN', 'Esta reserva pertence a outro aluno.')
     if (booking.status !== 'BOOKED') throw new AppError(409, 'BOOKING_NOT_ACTIVE', 'Esta reserva não pode mais ser cancelada.')
-    if (booking.type !== 'TRIAL') throw new AppError(409, 'REGULAR_LESSON_MANAGED_BY_ADMIN', 'Aulas regulares são gerenciadas pela administração.')
     if (!isAtLeast24HoursAway(booking.starts_at, now)) {
       throw new AppError(409, 'CANCELLATION_WINDOW_CLOSED', 'Cancelamentos são permitidos até 24 horas antes da aula.')
     }
@@ -100,9 +122,9 @@ export async function rescheduleBooking(studentId: number, bookingId: number, ne
       slot_id: number
       starts_at: Date
       status: string
-      type: string
+      type: 'TRIAL' | 'REGULAR'
     }>(
-      `SELECT b.id, b.student_id, b.slot_id, s.starts_at, s.status, s.type
+      `SELECT b.id, b.student_id, b.slot_id, s.starts_at, s.status, b.type
        FROM lesson_bookings b
        JOIN lesson_slots s ON s.id = b.slot_id
        WHERE b.id = $1
@@ -113,7 +135,6 @@ export async function rescheduleBooking(studentId: number, bookingId: number, ne
     if (!booking) throw new AppError(404, 'BOOKING_NOT_FOUND', 'Reserva não encontrada.')
     if (booking.student_id !== studentId) throw new AppError(403, 'FORBIDDEN', 'Esta reserva pertence a outro aluno.')
     if (booking.status !== 'BOOKED') throw new AppError(409, 'BOOKING_NOT_ACTIVE', 'Esta reserva não pode mais ser remarcada.')
-    if (booking.type !== 'TRIAL') throw new AppError(409, 'REGULAR_LESSON_MANAGED_BY_ADMIN', 'Aulas regulares são gerenciadas pela administração.')
     if (!isAtLeast24HoursAway(booking.starts_at, now)) {
       throw new AppError(409, 'RESCHEDULE_WINDOW_CLOSED', 'Remarcações são permitidas até 24 horas antes da aula.')
     }
@@ -122,7 +143,7 @@ export async function rescheduleBooking(studentId: number, bookingId: number, ne
     const newSlot = await client.query<{ id: number }>(
       `UPDATE lesson_slots
        SET status = 'BOOKED', updated_at = now()
-       WHERE id = $1 AND status = 'AVAILABLE' AND type = 'TRIAL' AND starts_at > now()
+       WHERE id = $1 AND status = 'AVAILABLE' AND type IS NULL AND starts_at > now()
        RETURNING id`,
       [newSlotId],
     )
@@ -138,6 +159,31 @@ export async function rescheduleBooking(studentId: number, bookingId: number, ne
        WHERE id = $1 AND status = 'BOOKED'`,
       [booking.slot_id],
     )
-    return { bookingId, slotId: newSlotId }
+    return { bookingId, slotId: newSlotId, type: booking.type }
   })
+}
+
+export async function getBookingEligibility(studentId: number) {
+  const result = await pool.query<{ lead_status: string | null; has_completed_trial: boolean }>(
+    `SELECT l.status AS lead_status,
+            EXISTS (
+              SELECT 1
+              FROM lesson_bookings b
+              JOIN lesson_slots s ON s.id = b.slot_id
+              WHERE b.student_id = $1 AND b.type = 'TRIAL' AND s.status = 'COMPLETED'
+                AND b.cancelled_at IS NULL
+            ) AS has_completed_trial
+     FROM users u
+     LEFT JOIN leads l ON l.converted_user_id = u.id
+     WHERE u.id = $1`,
+    [studentId],
+  )
+  const state = result.rows[0]
+  if (state?.lead_status === 'CONVERTED') {
+    return { canBook: true, nextLessonType: 'REGULAR' as const, message: null }
+  }
+  if (state?.has_completed_trial) {
+    return { canBook: false, nextLessonType: null, message: TRIAL_COMPLETED_MESSAGE }
+  }
+  return { canBook: true, nextLessonType: 'TRIAL' as const, message: null }
 }

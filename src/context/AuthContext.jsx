@@ -38,7 +38,11 @@ export function AuthProvider({ children }) {
     setState({ status: 'anonymous', user: null })
   }, [])
 
-  const value = useMemo(() => ({ ...state, refresh, signIn, signOut, signUp }), [state, refresh, signIn, signOut, signUp])
+  const setUser = useCallback((user) => {
+    setState({ status: 'authenticated', user })
+  }, [])
+
+  const value = useMemo(() => ({ ...state, refresh, setUser, signIn, signOut, signUp }), [state, refresh, setUser, signIn, signOut, signUp])
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 

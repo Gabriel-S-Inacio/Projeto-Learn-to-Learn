@@ -12,6 +12,9 @@ import NotFound from '../pages/NotFound/NotFound'
 import Schedule from '../pages/Schedule/Schedule'
 import Login from '../pages/Auth/Login'
 import Register from '../pages/Auth/Register'
+import ForgotPassword from '../pages/Auth/ForgotPassword'
+import ResetPassword from '../pages/Auth/ResetPassword'
+import Account from '../pages/Account/Account'
 
 export default function AppRoutes() {
   return (
@@ -26,6 +29,9 @@ export default function AppRoutes() {
         <Route element={<MyLessons />} path="minhas-aulas" />
         <Route element={<Login />} path="login" />
         <Route element={<Register />} path="cadastro" />
+        <Route element={<ForgotPassword />} path="forgot-password" />
+        <Route element={<ResetPassword />} path="reset-password" />
+        <Route element={<Account />} path="minha-conta" />
       </Route>
       <Route element={<AdminSchedule />} path="admin/agenda" />
       <Route element={<AdminLeads />} path="admin/leads" />

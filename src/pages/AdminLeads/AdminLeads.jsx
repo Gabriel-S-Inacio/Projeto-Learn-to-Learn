@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import Button from '../../components/ui/Button'
+import ConfirmDialog from '../../components/ui/ConfirmDialog'
 import StatePanel from '../../components/ui/StatePanel'
 import { useAuth } from '../../context/AuthContext'
-import { getAdminLeads, getLeadMetrics, updateLeadStatus } from '../../services/adminLeadService'
+import { getAdminLeads, getLeadMetrics, reopenLead, updateLeadStatus } from '../../services/adminLeadService'
 import './AdminLeads.css'
 
 const statusLabels = {
@@ -18,6 +19,7 @@ export default function AdminLeads() {
   const [state, setState] = useState({ leads: [], metrics: null, status: 'loading', error: null })
   const [busy, setBusy] = useState(null)
   const [feedback, setFeedback] = useState(null)
+  const [correction, setCorrection] = useState(null)
 
   const load = useCallback(async () => {
     if (authStatus !== 'authenticated' || user.role !== 'ADMIN') return
@@ -46,6 +48,25 @@ export default function AdminLeads() {
     }
   }
 
+  async function correctStatus() {
+    if (!correction?.status || correction.reason.trim().length < 5) return
+    setBusy(correction.lead.id)
+    setFeedback(null)
+    try {
+      await reopenLead(correction.lead.id, correction.status, correction.reason.trim())
+      setFeedback({
+        tone: 'success',
+        message: `Status de ${correction.lead.name} corrigido para ${statusLabels[correction.status].toLowerCase()}.`,
+      })
+      setCorrection(null)
+      await load()
+    } catch (error) {
+      setFeedback({ tone: 'error', message: error.message })
+    } finally {
+      setBusy(null)
+    }
+  }
+
   if (authStatus === 'loading') return <main className="admin-gate"><StatePanel title="Verificando acesso..."><span className="schedule-spinner" /></StatePanel></main>
   if (authStatus === 'anonymous' || user.role !== 'ADMIN') {
     return <main className="admin-gate"><section className="admin-gate__content"><span className="admin-brand">Learn to Learn</span><h1>Acesso administrativo</h1><p>Entre com uma conta administrativa para consultar os leads.</p><Button to="/login?redirect=/admin/leads">Entrar</Button><Link to="/">Voltar ao site</Link></section></main>
@@ -56,7 +77,7 @@ export default function AdminLeads() {
   return (
     <main className="admin-page">
       <header className="admin-header">
-        <div><Link className="admin-brand" to="/">Learn to Learn</Link><nav className="admin-nav"><Link to="/admin/agenda">Agenda</Link><Link className="is-active" to="/admin/leads">Leads</Link></nav></div>
+        <div><Link className="admin-brand" to="/">Learn to Learn</Link><nav className="admin-nav"><Link to="/admin/agenda">Agenda</Link><Link className="is-active" to="/admin/leads">Leads</Link><Link to="/minha-conta">Minha conta</Link></nav></div>
         <div className="admin-header__account"><span>{user.name}</span><button onClick={() => void signOut()} type="button">Sair</button></div>
       </header>
 
@@ -86,11 +107,40 @@ export default function AdminLeads() {
               <div className="lead-row__source"><span>{sourceLabels[lead.source]}</span>{lead.utmSource && <small>{[lead.utmSource, lead.utmMedium, lead.utmCampaign].filter(Boolean).join(' / ')}</small>}</div>
               <div><span className={`lead-status lead-status--${lead.status.toLowerCase()}`}>{statusLabels[lead.status]}</span><small className="lead-row__date">{new Intl.DateTimeFormat('pt-BR').format(new Date(lead.createdAt))}</small></div>
               <div className="lead-row__user">{lead.userName ? <><strong>{lead.userName}</strong><span>Conta associada</span></> : <span>Sem conta</span>}</div>
-              <div className="lead-row__action">{lead.allowedTransitions.length ? <select aria-label={`Alterar status de ${lead.name}`} disabled={busy !== null} onChange={(event) => { if (event.target.value) void changeStatus(lead, event.target.value) }} value=""><option value="">Alterar status</option>{lead.allowedTransitions.map((status) => <option key={status} value={status}>{statusLabels[status]}</option>)}</select> : <span>Etapa final</span>}</div>
+              <div className="lead-row__action">{lead.allowedTransitions.length ? <select aria-label={`Alterar status de ${lead.name}`} disabled={busy !== null} onChange={(event) => { if (event.target.value) void changeStatus(lead, event.target.value) }} value=""><option value="">Alterar status</option>{lead.allowedTransitions.map((status) => <option key={status} value={status}>{statusLabels[status]}</option>)}</select> : lead.allowedCorrections?.length ? <Button className="lead-row__correction" disabled={busy !== null} onClick={() => setCorrection({ lead, status: lead.allowedCorrections[0], reason: '' })} type="button" variant="outline">Corrigir status</Button> : null}</div>
             </article>
           ))}</div>}
         </section>
       </div>
+      {correction && <ConfirmDialog
+        busy={busy === correction.lead.id}
+        confirmDisabled={!correction.status || correction.reason.trim().length < 5}
+        confirmLabel="Confirmar correção"
+        onCancel={() => setCorrection(null)}
+        onConfirm={() => void correctStatus()}
+        title="Corrigir status final"
+      >
+        <p>Registre a correção de <strong>{correction.lead.name}</strong>. Esta ação ficará no histórico de auditoria.</p>
+        <div className="lead-correction-form">
+          <label>
+            <span>Novo status</span>
+            <select onChange={(event) => setCorrection((current) => ({ ...current, status: event.target.value }))} value={correction.status}>
+              {correction.lead.allowedCorrections.map((status) => <option key={status} value={status}>{statusLabels[status]}</option>)}
+            </select>
+          </label>
+          <label>
+            <span>Motivo da correção</span>
+            <textarea
+              maxLength={500}
+              onChange={(event) => setCorrection((current) => ({ ...current, reason: event.target.value }))}
+              placeholder="Explique por que o status precisa ser corrigido"
+              rows={4}
+              value={correction.reason}
+            />
+          </label>
+          <small>Mínimo de 5 caracteres.</small>
+        </div>
+      </ConfirmDialog>}
     </main>
   )
 }

@@ -38,6 +38,7 @@ export default function Header() {
           {status === 'authenticated' ? (
             <>
               <Link className="desktop-actions__login" to={user.role === 'ADMIN' ? '/admin/agenda' : '/minhas-aulas'}>{user.name.split(' ')[0]}</Link>
+              <Link className="desktop-actions__login" to="/minha-conta">Minha conta</Link>
               <button className="desktop-actions__logout" onClick={() => void signOut()} type="button">Sair</button>
             </>
           ) : <Link className="desktop-actions__login" to="/login">Entrar</Link>}

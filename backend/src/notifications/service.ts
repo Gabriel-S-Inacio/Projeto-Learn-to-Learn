@@ -82,7 +82,7 @@ export class NotificationService {
 
   private async getBookingDetails(bookingId: number) {
     const result = await pool.query<BookingDetails>(
-      `SELECT b.id AS booking_id, b.student_id, u.email, u.phone, s.starts_at, s.duration_minutes, s.type,
+      `SELECT b.id AS booking_id, b.student_id, u.email, u.phone, s.starts_at, s.duration_minutes, b.type,
               b.cancellation_reason
        FROM lesson_bookings b
        JOIN users u ON u.id = b.student_id

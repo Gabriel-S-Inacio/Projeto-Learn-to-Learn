@@ -3,13 +3,13 @@ import { z } from 'zod'
 import { authenticate, authorize } from '../auth/middleware.js'
 import { pool } from '../db/client.js'
 import { asyncHandler } from '../http/errors.js'
-import { cancelBooking, createBooking, rescheduleBooking } from './service.js'
+import { cancelBooking, createBooking, getBookingEligibility, rescheduleBooking } from './service.js'
 
 const idSchema = z.coerce.number().int().positive()
 const createSchema = z.object({
   slotId: z.number().int().positive(),
   sessionId: z.string().trim().min(8).max(128).regex(/^[a-zA-Z0-9_-]+$/).optional(),
-})
+}).strict()
 const rescheduleSchema = z.object({ newSlotId: z.number().int().positive() })
 
 export const bookingsRouter = Router()
@@ -32,7 +32,7 @@ bookingsRouter.get('/me', asyncHandler(async (request, response) => {
     cancellation_reason: string | null
     cancelled_at: Date | null
   }>(
-    `SELECT b.id AS booking_id, s.id AS slot_id, s.starts_at, s.duration_minutes, s.type, s.status,
+    `SELECT b.id AS booking_id, s.id AS slot_id, s.starts_at, s.duration_minutes, b.type, s.status,
             b.cancellation_reason, b.cancelled_at
      FROM lesson_bookings b
      JOIN lesson_slots s ON s.id = b.slot_id
@@ -52,6 +52,10 @@ bookingsRouter.get('/me', asyncHandler(async (request, response) => {
       cancelledAt: row.cancelled_at.toISOString(),
     } : null,
   })) })
+}))
+
+bookingsRouter.get('/eligibility', asyncHandler(async (request, response) => {
+  response.json(await getBookingEligibility(request.auth!.userId))
 }))
 
 bookingsRouter.delete('/:id', asyncHandler(async (request, response) => {

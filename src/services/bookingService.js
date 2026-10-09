@@ -10,6 +10,10 @@ export async function getMyBookings() {
   return response.lessons
 }
 
+export async function getBookingEligibility() {
+  return apiRequest('/bookings/eligibility')
+}
+
 export async function cancelBooking(bookingId) {
   return apiRequest(`/bookings/${bookingId}`, { method: 'DELETE' })
 }
